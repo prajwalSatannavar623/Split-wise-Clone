@@ -7,7 +7,6 @@ import { uploadOnCloudinary } from "../services/cloudinary.service.js";
 
 const registerUser = asyncHandler(async (req, res) => {
   const { userName, fullName, email, password } = req.body;
-  console.log(req.body);
 
   // validation :
   if (
@@ -33,8 +32,8 @@ const registerUser = asyncHandler(async (req, res) => {
 
   // avatar:
   let avatarLocalPath;
-  if (req.files && req.files.avatar.length > 0) {
-    avatarLocalPath = req.files.avatar[0].path;
+  if (req.file && req.file.fieldname === "avatar") {
+    avatarLocalPath = req.file.path;
   }
 
   if (!avatarLocalPath) {
