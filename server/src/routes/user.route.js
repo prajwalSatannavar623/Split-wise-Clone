@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyToken } from "../middlewares/auth.middleware.js";
+import { verifyMembership } from "../middlewares/groupAuth.middleware.js";
 
 import {
   registerUser,
@@ -16,6 +17,8 @@ import {
   getOtherAvatar,
   changePassword,
   searchUsers,
+  getCurrentUserGroups,
+  getCommonGroups,
 } from "../controllers/user.controller.js";
 
 const router = Router();
@@ -39,6 +42,11 @@ router.route("/change-password").post(verifyToken, changePassword);
 //user Profile routes
 router.route("/:userId").get(verifyToken, getOtherUser);
 router.route("/:userId/avatar").get(verifyToken, getOtherAvatar);
+
+// user Groups routes
+router.route("/me/groups").get(verifyToken, getCurrentUserGroups);
+
+router.route("/:userId/groups").get(verifyToken, getCommonGroups);
 
 router.route("/search").get(verifyToken, searchUsers);
 

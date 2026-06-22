@@ -23,8 +23,10 @@ app.use(cookieParser());
 
 // routes import
 import userRoute from "./routes/user.route.js";
+import groupRoute from "./routes/group.route.js";
 
 app.use("/api/v1/users", userRoute);
+app.use("/api/v1/groups", groupRoute);
 
 // // global error handler
 // app.use(globalErrorHandler);

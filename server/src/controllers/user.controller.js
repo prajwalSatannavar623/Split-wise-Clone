@@ -2,6 +2,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
+import { Group } from "../models/group.model.js";
+import mongoose from "mongoose";
 
 import jwt from "jsonwebtoken";
 
@@ -448,6 +450,61 @@ const getOtherAvatar = asyncHandler(async (req, res) => {
     );
 });
 
+const getCurrentUserGroups = asyncHandler(async (req, res) => {
+  const groups = await Group.aggregate([
+    { $match: { members: req.user._id } },
+    {
+      $project: {
+        _id: 1,
+        name: 1,
+        description: 1,
+        admin: 1,
+        memberCount: { $size: "$members" },
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, groups, "Current user groups fetched successfully"),
+    );
+});
+
+const getCommonGroups = asyncHandler(async (req, res) => {
+  console.log("Entered getCommonGroups");
+  const otherUserId = req.params.userId;
+
+  if (!otherUserId) {
+    throw new ApiError(400, "No userId Found");
+  }
+
+  const commonGroups = await Group.aggregate([
+    {
+      $match: {
+        members: {
+          $all: [req.user._id, new mongoose.Types.ObjectId(otherUserId)],
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        name: 1,
+        description: 1,
+        admin: 1,
+        memberCount: { $size: "$members" },
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, commonGroups, "Common groups fetched successfully"),
+    );
+});
+
 const searchUsers = asyncHandler(async (req, res) => {
   const searchQuery = req.query.q || "";
   const limit = req.query.limit || 10;
@@ -484,4 +541,6 @@ export {
   getOtherAvatar,
   changePassword,
   searchUsers,
+  getCurrentUserGroups,
+  getCommonGroups,
 };

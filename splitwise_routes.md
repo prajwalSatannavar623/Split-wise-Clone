@@ -2,43 +2,43 @@
 
 ## USER ROUTES
 
-### Authentication
+<!-- ### Authentication
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login user
 - `POST /api/auth/logout` - Logout user
-- `POST /api/auth/refresh` - Refresh JWT token
+- `POST /api/auth/refresh` - Refresh JWT token -->
 
-### User Management
+<!-- ### User Management
 - `GET /api/users/:userId` - Get user profile
 - `PUT /api/users/:userId` - Update user profile
 - `DELETE /api/users/:userId` - Delete user account
 - `GET /api/users/:userId/avatar` - Get user avatar
 - `POST /api/users/:userId/avatar` - Upload avatar
-- `GET /api/users/search` - Search users by name/email (query params)
+- `GET /api/users/search` - Search users by name/email (query params) -->
 
 ---
 
 ## GROUP ROUTES
 
-### Group CRUD
+<!-- ### Group CRUD
 - `POST /api/groups` - Create new group
   - Request body: name, description, admin (userId)
-  - Response: Group object with participants
+  - Response: Group object with participants -->
 
-- `GET /api/groups/:groupId` - Get group details
-  - Returns: Group info, participants, balances
+<!-- - `GET /api/groups/:groupId` - Get group details
+  - Returns: Group info, participants, balances -->
 
-- `PUT /api/groups/:groupId` - Update group (name, description)
-  - Only admin can update
+<!-- - `PUT /api/groups/:groupId` - Update group (name, description)
+  - Only admin can update -->
 
-- `DELETE /api/groups/:groupId` - Delete group
-  - Only admin can delete
+<!-- - `DELETE /api/groups/:groupId` - Delete group
+  - Only admin can delete -->
 
 ### Group Members
+
 - `GET /api/groups/:groupId/members` - Get all group members
 - `POST /api/groups/:groupId/members` - Add member to group
   - Request body: userId
-  
 - `DELETE /api/groups/:groupId/members/:userId` - Remove member from group
   - Auto-settle balances when removing
 
@@ -46,6 +46,7 @@
   - Returns: Who owes whom how much
 
 ### User's Groups
+
 - `GET /api/users/:userId/groups` - Get all groups user is part of
 - `GET /api/users/:userId/groups/admin` - Get groups user administers
 - `GET /api/users/:userId/favorite-groups` - Get favorite groups
@@ -57,8 +58,9 @@
 ## EXPENSE ROUTES
 
 ### Expense CRUD
+
 - `POST /api/expenses` - Create new expense
-  - Request body: 
+  - Request body:
     ```json
     {
       "description": "Dinner",
@@ -83,6 +85,7 @@
   - Can only delete if user is paidBy or admin
 
 ### Expense Filtering
+
 - `GET /api/groups/:groupId/expenses` - Get all expenses in group
   - Query params: startDate, endDate, limit, offset
   - Returns: sorted by createdAt desc
@@ -98,6 +101,7 @@
 ## SETTLEMENT & BALANCES ROUTES
 
 ### User Balances
+
 - `GET /api/users/:userId/balance` - Get total balance (overall)
   - Returns: How much user owes vs is owed
 
@@ -108,6 +112,7 @@
   - Returns: Balance with each user across all groups
 
 ### Group Balances
+
 - `GET /api/groups/:groupId/summary` - Get group expense summary
   - Returns: Total spent, per person breakdown
 
@@ -115,6 +120,7 @@
   - Returns: Minimum transactions needed to settle all debts
 
 ### Settlement
+
 - `POST /api/settlements` - Record payment between users
   - Request body:
     ```json
@@ -143,6 +149,7 @@
 ## DASHBOARD & SUMMARY ROUTES
 
 ### Overview
+
 - `GET /api/dashboard/summary` - Get dashboard summary for logged-in user
   - Returns: Total balance, recent expenses, pending settlements
 
@@ -153,6 +160,7 @@
   - Returns: Total spent, most common groups, spending trends
 
 ### Reports
+
 - `GET /api/reports/expenses` - Expense report
   - Query params: groupId, startDate, endDate, sortBy
   - Returns: Detailed expense breakdown
@@ -192,6 +200,7 @@
 ## RESPONSE FORMAT
 
 ### Success Response
+
 ```json
 {
   "success": true,
@@ -201,6 +210,7 @@
 ```
 
 ### Error Response
+
 ```json
 {
   "success": false,
@@ -214,6 +224,7 @@
 ## AUTHENTICATION
 
 All routes (except `/api/auth/*`) require:
+
 - Header: `Authorization: Bearer <JWT_TOKEN>`
 
 ---
@@ -231,23 +242,28 @@ All routes (except `/api/auth/*`) require:
 ## IMPORTANT BUSINESS LOGIC
 
 ### When Adding User to Group
+
 - Initialize their balance to 0
 - Don't include them in past expenses
 
 ### When Removing User from Group
+
 - Settle all pending balances
 - Keep historical data (don't delete)
 
 ### When Deleting Expense
+
 - Recalculate all user balances in the group
 - Update SplitInfo entries
 
 ### When Settling Debt
+
 - Update group member balance
 - Create settlement record
 - Notify both users
 
 ### Split Strategies
+
 - **EQUAL**: Divide amount equally among all users
 - **PERCENTAGE**: Each user has a percentage
 - **ITEMIZED**: Each user pays for specific items

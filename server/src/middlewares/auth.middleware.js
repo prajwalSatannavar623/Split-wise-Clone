@@ -43,6 +43,4 @@ const verifyToken = asyncHandler(async (req, res, next) => {
 //   next();
 // });
 
-const groupAuthorize = asyncHandler(async (req, res, next) => {});
-
-export { verifyToken, groupAuthorize };
+export { verifyToken };
