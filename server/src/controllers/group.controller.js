@@ -325,10 +325,68 @@ const getGroupBalances = asyncHandler(async (req, res) => {
     );
 });
 
+// checking pending
+const getGroupSummary = asyncHandler(async (req, res) => {
+  const { groupId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(groupId)) {
+    throw new ApiError(400, "Invalid group ID");
+  }
+
+  const group = await Group.findById(groupId).populate("members", "name email");
+  if (!group) {
+    throw new ApiError(404, "Group not found");
+  }
+
+  // Get all expenses in group
+  const expenses = await Expense.find({ group: groupId }).populate(
+    "paidBy",
+    "name email",
+  );
+
+  // Calculate summary
+  const summary = {
+    groupId,
+    groupName: group.name,
+    totalExpenses: expenses.length,
+    totalAmount: 0,
+    memberCount: group.members.length,
+    members: {},
+  };
+
+  // Initialize member summaries
+  group.members.forEach((member) => {
+    summary.members[member._id.toString()] = {
+      memberId: member._id,
+      name: member.name,
+      email: member.email,
+      paid: 0, // How much they paid
+      owes: 0, // How much they should pay
+      balance: 0, // paid - owes (positive = paid more, negative = owes more)
+    };
+  });
+
+  // Process each expense
+  expenses.forEach((expense) => {
+    const paidById = expense.paidBy._id.toString();
+
+    // Add to paid amount
+    summary.members[paidById].paid += expense.amount;
+    summary.totalAmount += expense.amount;
+
+    // Add to owes amount for each split
+    expense.splitInfo.forEach((split) => {
+      const userId = split.userId.toString();
+      summary.members[userId].owes += split.shareAmount;
+    });
+  });
+});
+
 export {
   createGroup,
   addMember,
   deleteGroup,
+  getGroupSummary,
   getGroupDetails,
   updateGroup,
   removeMember,

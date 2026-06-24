@@ -252,6 +252,7 @@ const updateUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, updatedUser, "User info updated successfully"));
 });
 
+// use case not speciefied in requirements...
 const deleteUser = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
@@ -374,30 +375,112 @@ const changePassword = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const user = await User.findOne({ _id: userId })
+    .populate("groupsIn", "name _id")
+    .populate("favGroups", "name _id")
+    .select("-password -refreshToken");
+
+  const groupsIn = await Group.find({
+    members: userId,
+  }).select("_id name balances");
+
   console.log("Entered getCurrentUser");
+
+  const settlementMap = [];
+
+  groupsIn.forEach((group) => {
+    group.balances.forEach((balance) => {
+      const settlement = {};
+      if (balance.from.toString() === req.user._id.toString()) {
+        settlement.position = "owe";
+        settlement.to = balance.to;
+        settlement.amount = balance.amount;
+        settlement.group = group.name;
+        settlement.groupId = group._id;
+        settlementMap.push(settlement);
+      } else if (balance.to.toString() === req.user._id.toString()) {
+        settlement.position = "owed";
+        settlement.to = balance.to;
+        settlement.amount = balance.amount;
+        settlement.group = group.name;
+        settlement.groupId = group._id;
+        settlementMap.push(settlement);
+      }
+    });
+  });
+
   return res
     .status(200)
-    .json(new ApiResponse(200, req.user, "User data fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { userInfo: user, transactionHistory: settlementMap },
+        "User data fetched successfully",
+      ),
+    );
 });
 
 const getOtherUser = asyncHandler(async (req, res) => {
-  const { otherUserId } = req.params;
+  const otherUserId = req.params.userId;
 
   if (!otherUserId) {
     throw new ApiError(400, "No userId Found");
   }
 
   const otherUser = await User.findById(otherUserId).select(
-    "-password -refreshToken",
+    "fullName userName email avatar",
   );
 
   if (!otherUser) {
     throw new ApiError(404, "User Not Found");
   }
 
+  const commonGroups = await Group.find({
+    members: { $all: [otherUserId, req.user._id] },
+  }).select("_id name balances");
+
+  if (!commonGroups) {
+    throw new ApiError(400, "No common groups found");
+  }
+
+  const settlementMap = [];
+
+  commonGroups.forEach((group) => {
+    group.balances.forEach((balance) => {
+      const settlement = {};
+      const from = balance.from.toString();
+      const to = balance.to.toString();
+
+      if (req.user._id.toString() === from && otherUserId.toString() === to) {
+        settlement.position = "owe";
+        settlement.amount = balance.amount;
+        settlement.group = group.name;
+        settlement.groupId = group._id;
+        settlementMap.push(settlement);
+      } else if (
+        otherUserId.toString() === from &&
+        req.user._id.toString() === to
+      ) {
+        settlement.postion = "owed";
+        settlement.amount = balance.amount;
+        settlement.group = group.name;
+        settlement.groupId = group._id;
+        settlementMap.push(settlement);
+      }
+    });
+  });
+
   return res
     .status(200)
-    .json(new ApiResponse(200, otherUser, "User data fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { userInfo: otherUser, transactionHistory: settlementMap },
+        "User data fetched successfully",
+      ),
+    );
 });
 
 const getCurrentAvatar = asyncHandler(async (req, res) => {
@@ -450,6 +533,7 @@ const getOtherAvatar = asyncHandler(async (req, res) => {
     );
 });
 
+// inside profile
 const getCurrentUserGroups = asyncHandler(async (req, res) => {
   const groups = await Group.aggregate([
     { $match: { members: req.user._id } },
@@ -471,6 +555,7 @@ const getCurrentUserGroups = asyncHandler(async (req, res) => {
     );
 });
 
+// redundant
 const getCommonGroups = asyncHandler(async (req, res) => {
   console.log("Entered getCommonGroups");
   const otherUserId = req.params.userId;
@@ -519,7 +604,7 @@ const searchUsers = asyncHandler(async (req, res) => {
       { fullName: { $regex: searchQuery, $options: "i" } },
     ],
   })
-    .select("_id userName fullName avatar email") // ONLY send safe data to the frontend! No passwords.
+    .select("_id userName fullName avatar email")
     .limit(limit);
 
   return res

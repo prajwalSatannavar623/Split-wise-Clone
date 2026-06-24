@@ -11,6 +11,7 @@ import {
   exitGroup,
   getGroupMembers,
   getGroupBalances,
+  getGroupSummary,
 } from "../controllers/group.controller.js";
 import {
   verifyGroupAdmin,
@@ -45,5 +46,9 @@ router
 router
   .route("/:groupId/balances")
   .get(verifyToken, verifyMembership, getGroupBalances);
+
+router
+  .route("/:groupId/summary")
+  .get(verifyToken, verifyMembership, getGroupSummary);
 
 export default router;
