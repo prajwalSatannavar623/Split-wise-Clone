@@ -507,7 +507,10 @@ const getCurrentUserGroups = asyncHandler(async (req, res) => {
 
   const groupsIn = await Group.find({
     members: userId,
-  }).select("_id name balances");
+  })
+    .select("_id name balances")
+    .populate("balances.from", "userName fullName")
+    .populate("balances.to", "userName fullName");
 
   const settlementMap = [];
 
@@ -515,16 +518,24 @@ const getCurrentUserGroups = asyncHandler(async (req, res) => {
     group.balances.forEach((balance) => {
       const settlement = {};
 
-      if (balance.from.toString() === userId.toString()) {
+      if (balance.from._id.toString() === userId.toString()) {
         settlement.position = "owe";
-        settlement.to = balance.to;
+
+        settlement.toId = balance.to._id;
+        settlement.toUserName = balance.to.userName;
+        settlement.toFullName = balance.to.fullName;
+
         settlement.amount = balance.amount;
         settlement.group = group.name;
         settlement.groupId = group._id;
         settlementMap.push(settlement);
-      } else if (balance.to.toString() === userId.toString()) {
+      } else if (balance.to._id.toString() === userId.toString()) {
         settlement.position = "owed";
-        settlement.to = balance.from;
+
+        settlement.toId = balance.from._id;
+        settlement.toUserName = balance.from.userName;
+        settlement.toFullName = balance.from.fullName;
+
         settlement.amount = balance.amount;
         settlement.group = group.name;
         settlement.groupId = group._id;
