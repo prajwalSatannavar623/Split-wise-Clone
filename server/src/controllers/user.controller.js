@@ -377,49 +377,18 @@ const changePassword = asyncHandler(async (req, res) => {
 const getCurrentUser = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
-  const user = await User.findOne({ _id: userId })
+  const user = await User.findById(userId)
     .populate("groupsIn", "name _id")
     .populate("favGroups", "name _id")
     .select("-password -refreshToken");
 
-  const groupsIn = await Group.find({
-    members: userId,
-  }).select("_id name balances");
-
-  console.log("Entered getCurrentUser");
-
-  const settlementMap = [];
-
-  groupsIn.forEach((group) => {
-    group.balances.forEach((balance) => {
-      const settlement = {};
-      if (balance.from.toString() === req.user._id.toString()) {
-        settlement.position = "owe";
-        settlement.to = balance.to;
-        settlement.amount = balance.amount;
-        settlement.group = group.name;
-        settlement.groupId = group._id;
-        settlementMap.push(settlement);
-      } else if (balance.to.toString() === req.user._id.toString()) {
-        settlement.position = "owed";
-        settlement.to = balance.to;
-        settlement.amount = balance.amount;
-        settlement.group = group.name;
-        settlement.groupId = group._id;
-        settlementMap.push(settlement);
-      }
-    });
-  });
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { userInfo: user, transactionHistory: settlementMap },
-        "User data fetched successfully",
-      ),
-    );
+    .json(new ApiResponse(200, user, "Current user fetched successfully"));
 });
 
 const getOtherUser = asyncHandler(async (req, res) => {
@@ -533,25 +502,45 @@ const getOtherAvatar = asyncHandler(async (req, res) => {
     );
 });
 
-// inside profile
 const getCurrentUserGroups = asyncHandler(async (req, res) => {
-  const groups = await Group.aggregate([
-    { $match: { members: req.user._id } },
-    {
-      $project: {
-        _id: 1,
-        name: 1,
-        description: 1,
-        admin: 1,
-        memberCount: { $size: "$members" },
-      },
-    },
-  ]);
+  const userId = req.user._id;
+
+  const groupsIn = await Group.find({
+    members: userId,
+  }).select("_id name balances");
+
+  const settlementMap = [];
+
+  groupsIn.forEach((group) => {
+    group.balances.forEach((balance) => {
+      const settlement = {};
+
+      if (balance.from.toString() === userId.toString()) {
+        settlement.position = "owe";
+        settlement.to = balance.to;
+        settlement.amount = balance.amount;
+        settlement.group = group.name;
+        settlement.groupId = group._id;
+        settlementMap.push(settlement);
+      } else if (balance.to.toString() === userId.toString()) {
+        settlement.position = "owed";
+        settlement.to = balance.from;
+        settlement.amount = balance.amount;
+        settlement.group = group.name;
+        settlement.groupId = group._id;
+        settlementMap.push(settlement);
+      }
+    });
+  });
 
   return res
     .status(200)
     .json(
-      new ApiResponse(200, groups, "Current user groups fetched successfully"),
+      new ApiResponse(
+        200,
+        settlementMap,
+        "User settlements mapped successfully",
+      ),
     );
 });
 
@@ -609,7 +598,7 @@ const searchUsers = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, searchQuery, "Fetched searched users"));
+    .json(new ApiResponse(200, searchedUsers, "Fetched searched users"));
 });
 
 export {
