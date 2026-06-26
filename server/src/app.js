@@ -35,6 +35,6 @@ app.use("/api/v1/expenses", expenseRoute);
 app.use("/api/v1/settlements", settlementRoute);
 
 // // global error handler
-// app.use(globalErrorHandler);
+app.use(globalErrorHandler);
 
 export default app;
