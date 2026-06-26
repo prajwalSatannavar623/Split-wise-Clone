@@ -507,41 +507,27 @@ const getCurrentUserGroups = asyncHandler(async (req, res) => {
 
   const groupsIn = await Group.find({
     members: userId,
-  })
-    .select("_id name balances")
-    .populate("balances.from", "userName fullName")
-    .populate("balances.to", "userName fullName");
+  }).select("_id name balances");
 
-  const settlementMap = [];
+  const groupSummaries = groupsIn.map((group) => {
+    let totalOwe = 0;
+    let totalOwed = 0;
 
-  groupsIn.forEach((group) => {
     group.balances.forEach((balance) => {
-      const settlement = {};
-
-      if (balance.from._id.toString() === userId.toString()) {
-        settlement.position = "owe";
-
-        settlement.toId = balance.to._id;
-        settlement.toUserName = balance.to.userName;
-        settlement.toFullName = balance.to.fullName;
-
-        settlement.amount = balance.amount;
-        settlement.group = group.name;
-        settlement.groupId = group._id;
-        settlementMap.push(settlement);
-      } else if (balance.to._id.toString() === userId.toString()) {
-        settlement.position = "owed";
-
-        settlement.toId = balance.from._id;
-        settlement.toUserName = balance.from.userName;
-        settlement.toFullName = balance.from.fullName;
-
-        settlement.amount = balance.amount;
-        settlement.group = group.name;
-        settlement.groupId = group._id;
-        settlementMap.push(settlement);
+      if (balance.from.toString() === userId.toString()) {
+        totalOwe += balance.amount;
+      } else if (balance.to.toString() === userId.toString()) {
+        totalOwed += balance.amount;
       }
     });
+
+    return {
+      groupId: group._id,
+      groupName: group.name,
+      totalOwe: totalOwe,
+      totalOwed: totalOwed,
+      netBalance: totalOwed - totalOwe,
+    };
   });
 
   return res
@@ -549,8 +535,8 @@ const getCurrentUserGroups = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        settlementMap,
-        "User settlements mapped successfully",
+        groupSummaries,
+        "Group balances aggregated successfully",
       ),
     );
 });
