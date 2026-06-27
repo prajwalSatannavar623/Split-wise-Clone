@@ -17,6 +17,16 @@ const GroupDetails = () => {
   const [activeTab, setActiveTab] = useState("expenses");
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
+  // --- NEW STATE FOR ADD MEMBER ---
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [actionMessage, setActionMessage] = useState({ type: "", text: "" });
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", description: "" });
+
   const fetchGroupDetails = async () => {
     setIsLoading(true);
     setError(null);
@@ -30,9 +40,88 @@ const GroupDetails = () => {
     }
   };
 
+  const openEditModal = () => {
+    setEditForm({ name: group.name, description: group.description });
+    setIsEditModalOpen(true);
+  };
+
   useEffect(() => {
     fetchGroupDetails();
   }, [groupId]);
+
+  // --- LIVE SEARCH (DEBOUNCED) ---
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const response = await apiClient.get(`/users/search?q=${searchQuery}`);
+        setSearchResults(response.data.data || []);
+      } catch (err) {
+        console.error("Search failed:", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500); // Waits 500ms after the user stops typing to fire the API
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
+  // --- ADD MEMBER HANDLER ---
+  const handleAddMember = async (userIdToAdd) => {
+    try {
+      await apiClient.post(`/groups/${groupId}/add-member`, { userIdToAdd });
+
+      setActionMessage({ type: "success", text: "Member added successfully!" });
+      fetchGroupDetails(); // Refresh the group details to show the new member
+
+      // Close modal and reset state after a short delay
+      setTimeout(() => {
+        setIsAddMemberModalOpen(false);
+        setSearchQuery("");
+        setSearchResults([]);
+        setActionMessage({ type: "", text: "" });
+      }, 1500);
+    } catch (err) {
+      setActionMessage({
+        type: "error",
+        text: err.response?.data?.message || "Failed to add member.",
+      });
+      // Clear error message after 3 seconds
+      setTimeout(() => setActionMessage({ type: "", text: "" }), 3000);
+    }
+  };
+
+  // update group handler
+  const handleUpdateGroup = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const response = await apiClient.put(`/groups/${groupId}`, editForm);
+
+      // ✅ Merge ONLY the updated text fields into the existing rich state
+      setGroup((prevGroup) => ({
+        ...prevGroup,
+        name: response.data.data.name,
+        description: response.data.data.description,
+      }));
+
+      setIsEditModalOpen(false);
+      setActionMessage({
+        type: "success",
+        text: "Group updated successfully!",
+      });
+    } catch (err) {
+      setActionMessage({ type: "error", text: "Failed to update group." });
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => setActionMessage({ type: "", text: "" }), 3000);
+    }
+  };
 
   // Authorization checks
   const isAdmin = group?.admin === currentUser?._id;
@@ -68,11 +157,17 @@ const GroupDetails = () => {
           <div className="flex gap-3 mt-4 md:mt-0 z-10">
             <Button
               variant="outline"
+              onClick={openEditModal} // Connect the button
               className="border-gray-600 text-gray-300 bg-gray-900/50"
             >
               Edit Group
             </Button>
-            <Button variant="primary">+ Add Member</Button>
+            <Button
+              variant="primary"
+              onClick={() => setIsAddMemberModalOpen(true)}
+            >
+              + Add Member
+            </Button>
           </div>
         )}
       </div>
@@ -112,20 +207,20 @@ const GroupDetails = () => {
                 const paidByName = isPaidByMe
                   ? "You"
                   : expense.paidBy?.fullName;
+
+                // ONLY admin or the person who paid can edit
                 const canEdit = isPaidByMe || isAdmin;
+
                 const currencySymbol =
                   expense.currencyType === "USD" ? "$" : "₹";
                 const totalAmount = Number(expense.amount);
 
-                // --- NEW LOGIC: CALCULATE USER SHARE ---
-                // Find my specific split inside the expense
                 const mySplit = expense.splitInfo?.find(
                   (split) =>
                     (split.userId?._id || split.userId) === currentUser?._id,
                 );
                 const myShareAmount = mySplit ? Number(mySplit.shareAmount) : 0;
 
-                // Determine the display text and colors for the share
                 let shareText = "Not involved";
                 let shareColor = "text-gray-500";
                 let shareValue = null;
@@ -155,12 +250,10 @@ const GroupDetails = () => {
                     key={expense._id}
                     className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-gray-800/20 border border-gray-800 rounded-lg hover:bg-gray-800/40 transition-colors group"
                   >
-                    {/* Left Side: Icon & Details */}
                     <div className="flex items-center gap-4 flex-1">
                       <div className="w-12 h-12 rounded-xl bg-gray-700/50 border border-gray-600 flex items-center justify-center font-bold text-xl text-gray-300 shrink-0">
                         {categoryInitial}
                       </div>
-
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
                           <p className="text-text-inverse font-medium text-lg leading-none">
@@ -183,9 +276,7 @@ const GroupDetails = () => {
                       </div>
                     </div>
 
-                    {/* Right Side: Your Share & Edit */}
                     <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
-                      {/* --- NEW SHARE DISPLAY --- */}
                       <div className="flex flex-col items-start sm:items-end min-w-25">
                         <span className="text-[11px] uppercase tracking-wider text-text-muted font-semibold">
                           {shareText}
@@ -200,14 +291,15 @@ const GroupDetails = () => {
                         )}
                       </div>
 
-                      {/* Edit Button */}
-                      {canEdit && (
+                      {/* --- ACTION BUTTONS (VIEW & EDIT) --- */}
+                      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        {/* 1. VIEW BUTTON - Visible to ALL members */}
                         <button
                           onClick={() =>
-                            navigate(`/dashboard/expenses/edit/${expense._id}`)
+                            navigate(`/dashboard/expenses/${expense._id}`)
                           }
-                          className="text-gray-500 hover:text-primary-500 transition-colors sm:opacity-0 sm:group-hover:opacity-100 p-2"
-                          title="Edit Expense"
+                          className="text-gray-500 hover:text-blue-400 transition-colors p-2"
+                          title="View Details"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -215,10 +307,37 @@ const GroupDetails = () => {
                             viewBox="0 0 20 20"
                             fill="currentColor"
                           >
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                            <path
+                              fillRule="evenodd"
+                              d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                              clipRule="evenodd"
+                            />
                           </svg>
                         </button>
-                      )}
+
+                        {/* 2. EDIT BUTTON - Visible ONLY to Admin or Payer */}
+                        {canEdit && (
+                          <button
+                            onClick={() =>
+                              navigate(
+                                `/dashboard/expenses/edit/${expense._id}`,
+                              )
+                            }
+                            className="text-gray-500 hover:text-primary-500 transition-colors p-2"
+                            title="Edit Expense"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -239,13 +358,11 @@ const GroupDetails = () => {
           <div className="flex flex-col gap-3">
             {group.balances?.length > 0 ? (
               group.balances.map((balance) => {
-                // Determine the color based on current user's involvement
-                let amountColor = "text-orange-400"; // Default: not involved
-
+                let amountColor = "text-orange-400";
                 if (currentUser?._id === balance.from?._id) {
-                  amountColor = "text-red-400"; // You owe someone
+                  amountColor = "text-red-400";
                 } else if (currentUser?._id === balance.to?._id) {
-                  amountColor = "text-green-400"; // Someone owes you
+                  amountColor = "text-green-400";
                 }
 
                 return (
@@ -290,7 +407,6 @@ const GroupDetails = () => {
                       </div>
                     </div>
 
-                    {/* Apply the dynamic color here */}
                     <div
                       className={`w-24 text-right font-bold shrink-0 ${amountColor}`}
                     >
@@ -308,7 +424,145 @@ const GroupDetails = () => {
         )}
       </div>
 
-      {/* --- MEMBERS MODAL --- */}
+      {/* --- ADD MEMBER MODAL (LIVE SEARCH) --- */}
+      {isAddMemberModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={() => {
+            setIsAddMemberModalOpen(false);
+            setSearchQuery("");
+            setSearchResults([]);
+            setActionMessage({ type: "", text: "" });
+          }}
+        >
+          <div
+            className="bg-bg-dark border border-gray-700 rounded-xl w-full max-w-md overflow-hidden flex flex-col shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center p-4 border-b border-gray-800 bg-gray-900/50">
+              <h3 className="text-lg font-bold text-text-inverse">
+                Add New Member
+              </h3>
+              <button
+                onClick={() => {
+                  setIsAddMemberModalOpen(false);
+                  setSearchQuery("");
+                  setSearchResults([]);
+                }}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 flex flex-col gap-4">
+              {/* Status Message */}
+              {actionMessage.text && (
+                <div
+                  className={`p-3 rounded-lg text-sm font-medium ${
+                    actionMessage.type === "error"
+                      ? "bg-red-500/10 text-red-500 border border-red-500/50"
+                      : "bg-green-500/10 text-green-500 border border-green-500/50"
+                  }`}
+                >
+                  {actionMessage.text}
+                </div>
+              )}
+
+              {/* Search Input */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search by name or username..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full p-3 pl-10 bg-gray-900 border border-gray-700 rounded-lg text-text-inverse focus:border-primary-500 outline-none transition-colors"
+                  autoFocus
+                />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 absolute left-3 top-3.5 text-gray-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+
+              {/* Search Results */}
+              <div className="flex flex-col max-h-[40vh] overflow-y-auto gap-2">
+                {isSearching ? (
+                  <div className="text-center text-text-muted py-4 animate-pulse">
+                    Searching...
+                  </div>
+                ) : searchQuery.trim() === "" ? (
+                  <div className="text-center text-gray-600 py-4 text-sm">
+                    Type a name to search users
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map((user) => {
+                    const isAlreadyMember = group.members?.some(
+                      (member) => member._id === user._id,
+                    );
+
+                    return (
+                      <div
+                        key={user._id}
+                        className="flex items-center justify-between p-3 rounded-lg bg-gray-800/30 border border-gray-800/50 hover:bg-gray-800/80 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white font-bold shrink-0 overflow-hidden border border-gray-600">
+                            {user.avatar ? (
+                              <img
+                                src={user.avatar}
+                                alt="Avatar"
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              user.fullName.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-text-inverse">
+                              {user.fullName}
+                            </span>
+                            <span className="text-xs text-text-muted">
+                              @{user.userName}
+                            </span>
+                          </div>
+                        </div>
+
+                        <Button
+                          variant={isAlreadyMember ? "outline" : "primary"}
+                          onClick={() =>
+                            !isAlreadyMember && handleAddMember(user._id)
+                          }
+                          disabled={isAlreadyMember}
+                          className={`text-xs px-3 py-1 ${isAlreadyMember ? "opacity-50 cursor-not-allowed border-gray-600 text-gray-400" : ""}`}
+                        >
+                          {isAlreadyMember ? "Added" : "Add"}
+                        </Button>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center text-text-muted py-4">
+                    No users found.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MEMBERS VIEW MODAL (EXISTING) --- */}
       {isMembersModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
@@ -334,8 +588,8 @@ const GroupDetails = () => {
               {group.members?.map((member) => (
                 <div
                   key={member._id}
-                  onClick={() => navigate(`/dashboard/members/${member._id}`)}
-                  className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors"
+                  // Removed the navigate onClick and hover:bg-gray-800/cursor-pointer
+                  className="flex items-center gap-4 p-3 rounded-lg transition-colors"
                 >
                   <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center text-white font-bold shrink-0 overflow-hidden border border-gray-600">
                     {member.avatar ? (
@@ -364,6 +618,55 @@ const GroupDetails = () => {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* --- GROUP INFO EDIT MODAL MODAL (EXISTING) --- */}
+      {isEditModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={() => setIsEditModalOpen(false)}
+        >
+          <form
+            className="bg-bg-dark border border-gray-700 rounded-xl w-full max-w-md p-6 flex flex-col gap-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={handleUpdateGroup}
+          >
+            <h3 className="text-lg font-bold text-text-inverse">
+              Edit Group Details
+            </h3>
+
+            <input
+              type="text"
+              placeholder="Group Name"
+              value={editForm.name}
+              onChange={(e) =>
+                setEditForm({ ...editForm, name: e.target.value })
+              }
+              className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-text-inverse outline-none focus:border-primary-500"
+            />
+            <textarea
+              placeholder="Group Description"
+              value={editForm.description}
+              onChange={(e) =>
+                setEditForm({ ...editForm, description: e.target.value })
+              }
+              className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-text-inverse outline-none focus:border-primary-500 h-24"
+            />
+
+            <div className="flex gap-3 justify-end mt-2">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit">
+                Save Changes
+              </Button>
+            </div>
+          </form>
         </div>
       )}
 

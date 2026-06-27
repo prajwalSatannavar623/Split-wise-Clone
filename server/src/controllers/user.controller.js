@@ -598,6 +598,46 @@ const searchUsers = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, searchedUsers, "Fetched searched users"));
 });
 
+const getMyFriends = asyncHandler(async (req, res) => {
+  const currentUserId = req.user._id;
+
+  // 1. Find all groups where the current user is a member
+  // 2. Project all members from those groups
+  // 3. Filter out the current user
+  // 4. Return unique users
+  const friends = await Group.aggregate([
+    { $match: { members: currentUserId } },
+    { $unwind: "$members" },
+    { $match: { members: { $ne: currentUserId } } },
+    {
+      $group: {
+        _id: "$members", // Group by user ID to get unique friends
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "_id",
+        foreignField: "_id",
+        as: "userDetails",
+      },
+    },
+    { $unwind: "$userDetails" },
+    {
+      $project: {
+        _id: 1,
+        fullName: "$userDetails.fullName",
+        userName: "$userDetails.userName",
+        avatar: "$userDetails.avatar",
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, friends, "Friends list fetched successfully"));
+});
+
 export {
   registerUser,
   loginUser,
@@ -614,4 +654,5 @@ export {
   searchUsers,
   getCurrentUserGroups,
   getCommonGroups,
+  getMyFriends,
 };

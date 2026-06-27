@@ -16,6 +16,7 @@ import Friends from "./pages/Dashboard/Friends.jsx";
 import Activity from "./pages/Dashboard/Activity.jsx";
 import Account from "./pages/Dashboard/Account.jsx";
 import Overview from "./pages/Dashboard/Overview.jsx";
+import ExpenseDetails from "./Pages/Dashboard/ExpenseDetails.jsx";
 
 import { useDispatch } from "react-redux";
 import { useState, useEffect } from "react";
@@ -23,6 +24,7 @@ import { apiClient } from "./api/axios.js";
 import { setCredentials } from "./features/authSlice.js";
 
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import UserProfile from "./Pages/Dashboard/UserProfile";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -39,13 +41,17 @@ const router = createBrowserRouter(
 
           {/* Children */}
           <Route path="groups" element={<Groups />} />
-
           <Route path="groups/:groupId" element={<GroupDetails />} />
-
           <Route path="groups/:groupId/add-expense" element={<ExpenseForm />} />
+
+          {/* --- NEW: Expense Details Route --- */}
+          <Route path="expenses/:expenseId" element={<ExpenseDetails />} />
+
           <Route path="expenses/edit/:expenseId" element={<ExpenseForm />} />
 
           <Route path="friends" element={<Friends />} />
+          <Route path="users/:userId" element={<UserProfile />} />
+
           <Route path="activity" element={<Activity />} />
           <Route path="account" element={<Account />} />
         </Route>

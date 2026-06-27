@@ -69,10 +69,6 @@ const Overview = () => {
           {error}
         </div>
       )}
-
-      <Button variant="primary" className="w-1/2">
-        + create new group
-      </Button>
     </>
   );
 };
