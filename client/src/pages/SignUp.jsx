@@ -73,6 +73,7 @@ const SignUp = () => {
         err.response?.data?.message || "An unexpected Error occured";
 
       setError(backendErrorMessage);
+    } finally {
       setIsloading(false);
     }
   };

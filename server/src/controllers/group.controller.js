@@ -127,13 +127,28 @@ const getGroupDetails = asyncHandler(async (req, res) => {
     throw new ApiError(400, "No groupId Found");
   }
 
-  const group = await Group.findById(groupId);
+  // 1. Fetch and deeply populate the group
+  const group = await Group.findById(groupId)
+    .populate("members", "fullName userName email avatar") // Get member details
+    .populate("balances.from", "fullName userName avatar") // Get who owes
+    .populate("balances.to", "fullName userName avatar") // Get who is owed
+    .populate({
+      path: "expenses",
+      options: { sort: { createdAt: -1 } }, // Sort expenses by newest first
+      // Assuming your expense schema has a 'paidBy' field referencing User
+      populate: { path: "paidBy", select: "fullName avatar" },
+    });
 
   if (!group) {
     throw new ApiError(404, "Group Not Found");
   }
 
-  if (!group.members.includes(req.user._id)) {
+  // 2. Because 'members' is now populated (an array of objects), we must map to check IDs
+  const isMember = group.members.some(
+    (member) => member._id.toString() === req.user._id.toString(),
+  );
+
+  if (!isMember) {
     throw new ApiError(
       403,
       "Access denied: You are not a member of this group",

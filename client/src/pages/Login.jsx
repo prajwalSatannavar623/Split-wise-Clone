@@ -44,6 +44,7 @@ const Login = () => {
       const backendErrorMessage =
         err.response?.data?.message || "An unexpected error occurred.";
       setError(backendErrorMessage);
+    } finally {
       setIsloading(false);
     }
   };

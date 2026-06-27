@@ -117,7 +117,6 @@ const createExpense = asyncHandler(async (req, res) => {
 });
 
 const getExpenseById = asyncHandler(async (req, res) => {
-  console.log("Entered getExpenseById");
   const { expenseId } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(expenseId)) {
@@ -125,23 +124,20 @@ const getExpenseById = asyncHandler(async (req, res) => {
   }
 
   const expense = await Expense.findById(expenseId)
-    .populate("paidBy", "name email avatar")
+    .populate("paidBy", "fullName userName avatar")
     .populate("group", "name members")
-    .populate("splitInfo.userId", "name email");
-
-  console.log(expense.group);
+    .populate("splitInfo.userId", "fullName userName avatar");
 
   if (!expense) {
     throw new ApiError(404, "Expense not found");
   }
 
-  // if accessor belongs to the group the expense belongs:
   const isValidAccess = expense.group.members.some(
-    (memIds) => memIds.toString() === req.user._id.toString(),
+    (memId) => memId.toString() === req.user._id.toString(),
   );
 
   if (!isValidAccess) {
-    throw new ApiError(403, "Unauthorised Excess");
+    throw new ApiError(403, "Unauthorised Access");
   }
 
   return res
@@ -311,6 +307,7 @@ const updateExpense = asyncHandler(async (req, res) => {
   }
 });
 
+// not being used
 const deleteExpense = asyncHandler(async (req, res) => {
   const { expenseId } = req.params;
   const userId = req.user._id.toString();
@@ -440,7 +437,6 @@ const getUserExpensesAggregated = async (
 
 const getCurrentUserExpenses = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-
   const {
     type,
     groupId,
@@ -450,66 +446,61 @@ const getCurrentUserExpenses = asyncHandler(async (req, res) => {
     offset = 0,
   } = req.query;
 
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    throw new ApiError(400, "Invalid user ID");
-  }
-
-  const groupsUserBelongsTo = req.user.groupsIn;
-
-  const belongsTo = groupsUserBelongsTo.some(
-    (group) => group.toString() === groupId.toString(),
-  );
-
-  if (!belongsTo) {
-    throw new ApiError(404, "Unauthorised request");
-  }
-
   const query = {};
 
-  // Type: paid or owed
-  if (type === "paid") {
-    query.paidBy = userId;
-  } else if (type === "owed") {
-    query["splitInfo.userId"] = userId;
-  } else if (!type) {
-    // Get both paid and owed (using aggregation)
-    return getUserExpensesAggregated(
-      userId,
-      groupId,
-      startDate,
-      endDate,
-      limit,
-      offset,
-      res,
-    );
-  }
-
+  // 1. Group ID check (Only if provided in the query)
   if (groupId) {
     if (!mongoose.Types.ObjectId.isValid(groupId)) {
       throw new ApiError(400, "Invalid group ID");
     }
+
+    const belongsTo = req.user.groupsIn.some(
+      (group) => group.toString() === groupId.toString(),
+    );
+
+    if (!belongsTo) {
+      throw new ApiError(
+        403,
+        "Unauthorised request: Not a member of this group",
+      );
+    }
+
     query.group = groupId;
+  } else {
+    // Optional: If no groupId is provided, explicitly limit to groups the user is in
+    query.group = { $in: req.user.groupsIn };
   }
 
+  // 2. Type filtering
+  if (type === "paid") {
+    // Expenses where I paid the bill
+    query.paidBy = userId;
+  } else if (type === "owed") {
+    // Expenses where I am part of the split, BUT someone else paid the bill
+    query["splitInfo.userId"] = userId;
+    query.paidBy = { $ne: userId }; // <-- THIS FIXES THE BUG
+  } else {
+    // "All" - either they paid, or they are in the split info
+    query.$or = [{ paidBy: userId }, { "splitInfo.userId": userId }];
+  }
+
+  // 3. Date filtering
   if (startDate || endDate) {
     query.createdAt = {};
-    if (startDate) {
-      query.createdAt.$gte = new Date(startDate);
-    }
-    if (endDate) {
-      query.createdAt.$lte = new Date(endDate);
-    }
+    if (startDate) query.createdAt.$gte = new Date(startDate);
+    if (endDate) query.createdAt.$lte = new Date(endDate);
   }
 
   const totalExpenses = await Expense.countDocuments(query);
 
+  // 4. Fetch and populate consistently using your actual schema fields (fullName)
   const expenses = await Expense.find(query)
     .sort({ createdAt: -1 })
     .limit(parseInt(limit))
     .skip(parseInt(offset))
-    .populate("paidBy", "name email avatar")
+    .populate("paidBy", "fullName userName avatar")
     .populate("group", "name")
-    .populate("splitInfo.userId", "name email");
+    .populate("splitInfo.userId", "fullName userName avatar");
 
   return res.status(200).json(
     new ApiResponse(

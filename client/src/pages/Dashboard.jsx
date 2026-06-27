@@ -1,17 +1,44 @@
 import { useSelector, useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { logout } from "../features/authSlice.js";
 import { NavLink, Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import { apiClient } from "../api/axios.js";
 
 const Dashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const user = useSelector((state) => state.auth.user);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate("/login");
+  useEffect(() => {
+    // Only navigate if we are NOT already on the login page
+    // This prevents the "Forward" button issue from conflicting with manual navigation
+    if (!user && location.pathname !== "/login") {
+      navigate("/login", { replace: true });
+    }
+  }, [user, location.pathname, navigate]);
+
+  // Inside your Logout handler
+  const handleLogout = async () => {
+    try {
+      // 1. Hit the backend route to clear DB refresh token and HTTP-only cookies
+      // Make sure the route string matches your backend setup (e.g., "/users/logout")
+      await apiClient.post("/users/auth/logout");
+    } catch (error) {
+      // Even if the backend fails (e.g. network error), we still want to log them out locally
+      console.error("Backend logout failed, forcing frontend logout:", error);
+    } finally {
+      // 2. Clear Redux State
+      dispatch(logout());
+
+      // 3. Clear LocalStorage
+      localStorage.removeItem("accessToken");
+
+      // 4. Navigate to login and replace history
+      navigate("/login", { replace: true });
+    }
   };
 
   const navLinkClasses = ({ isActive }) =>

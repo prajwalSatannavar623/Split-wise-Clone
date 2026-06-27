@@ -17,7 +17,7 @@ import {
 const router = Router();
 
 router.route("/:groupId").post(verifyToken, verifyMembership, createExpense);
-router.route("/detail/:expenseId").get(verifyToken, getExpenseById);
+router.route("/:expenseId").get(verifyToken, getExpenseById);
 
 router.route("/:expenseId").put(verifyToken, updateExpense);
 router.route("/:expenseId").delete(verifyToken, deleteExpense);
