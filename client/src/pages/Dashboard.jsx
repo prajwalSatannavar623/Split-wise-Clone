@@ -2,7 +2,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { logout } from "../features/authSlice.js";
 import { NavLink, Outlet } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { apiClient } from "../api/axios.js";
 
 const Dashboard = () => {
@@ -12,33 +12,79 @@ const Dashboard = () => {
 
   const user = useSelector((state) => state.auth.user);
 
+  // Add these to your state
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+  // useEffect(() => {
+  //   // Only navigate if we are NOT already on the login page
+  //   // This prevents the "Forward" button issue from conflicting with manual navigation
+  //   if (!user && location.pathname !== "/login") {
+  //     navigate("/login", { replace: true });
+  //   }
+  // }, [user, location.pathname, navigate]);
+
   useEffect(() => {
-    // Only navigate if we are NOT already on the login page
-    // This prevents the "Forward" button issue from conflicting with manual navigation
-    if (!user && location.pathname !== "/login") {
-      navigate("/login", { replace: true });
+    // If there is no user, we MUST ensure we aren't just looking at a
+    // cached version of the dashboard.
+    if (!user) {
+      window.location.replace("/login"); // Forces a full navigation, bypassing cache
     }
-  }, [user, location.pathname, navigate]);
+  }, [user, navigate]);
 
   // Inside your Logout handler
-  const handleLogout = async () => {
+  // const handleLogout = async () => {
+  //   try {
+  //     // 1. Hit the backend route to clear DB refresh token and HTTP-only cookies
+  //     // Make sure the route string matches your backend setup (e.g., "/users/logout")
+  //     await apiClient.post("/users/auth/logout");
+  //   } catch (error) {
+  //     // Even if the backend fails (e.g. network error), we still want to log them out locally
+  //     console.error("Backend logout failed, forcing frontend logout:", error);
+  //   } finally {
+  //     // 2. Clear Redux State
+  //     dispatch(logout());
+
+  //     // 3. Clear LocalStorage
+  //     localStorage.removeItem("accessToken");
+
+  //     // 4. Navigate to login and replace history
+  //     navigate("/login", { replace: true });
+  //   }
+  // };
+
+  // const confirmLogout = async () => {
+  //   setIsLogoutModalOpen(false);
+  //   try {
+  //     await apiClient.post("/users/auth/logout");
+  //   } catch (error) {
+  //     console.error("Backend logout failed:", error);
+  //   } finally {
+  //     dispatch(logout());
+  //     localStorage.removeItem("accessToken");
+
+  //     // Using window.location.replace is the "nuclear" option
+  //     // It prevents the browser from keeping the dashboard in its history stack
+  //     window.location.replace("/login");
+  //   }
+  // };
+
+  const confirmLogout = async () => {
+    setIsLogoutModalOpen(false);
+
+    // 1. Clear local storage/state
+    localStorage.removeItem("accessToken");
+    dispatch(logout());
+
+    // 2. Perform the API call
     try {
-      // 1. Hit the backend route to clear DB refresh token and HTTP-only cookies
-      // Make sure the route string matches your backend setup (e.g., "/users/logout")
       await apiClient.post("/users/auth/logout");
-    } catch (error) {
-      // Even if the backend fails (e.g. network error), we still want to log them out locally
-      console.error("Backend logout failed, forcing frontend logout:", error);
-    } finally {
-      // 2. Clear Redux State
-      dispatch(logout());
-
-      // 3. Clear LocalStorage
-      localStorage.removeItem("accessToken");
-
-      // 4. Navigate to login and replace history
-      navigate("/login", { replace: true });
+    } catch (err) {
+      /* ignore */
     }
+
+    // 3. NUCLEAR HISTORY RESET
+    // This removes all previous entries from the history stack
+    window.location.href = "/login";
   };
 
   const navLinkClasses = ({ isActive }) =>
@@ -102,7 +148,7 @@ const Dashboard = () => {
               </div>
             </div>
             <button
-              onClick={handleLogout}
+              onClick={() => setIsLogoutModalOpen(true)}
               className="text-sm text-red-400 hover:text-red-300 transition"
             >
               Logout
@@ -114,6 +160,32 @@ const Dashboard = () => {
           <Outlet />
         </div>
       </main>
+
+      {/* Logout Confirmation Modal */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-gray-900 border border-gray-700 p-6 rounded-xl shadow-2xl max-w-sm w-full">
+            <h3 className="text-lg font-bold text-white mb-2">Log out?</h3>
+            <p className="text-text-muted mb-6">
+              Are you sure you want to log out of your account?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsLogoutModalOpen(false)}
+                className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-white transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium transition"
+              >
+                Yes, Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
