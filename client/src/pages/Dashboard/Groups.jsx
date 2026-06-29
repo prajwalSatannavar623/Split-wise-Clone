@@ -7,7 +7,6 @@ const Groups = () => {
   const [error, setError] = useState(null);
   const [groups, setGroups] = useState([]);
 
-  // --- NEW STATE FOR CREATING GROUP ---
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createForm, setCreateForm] = useState({ name: "", description: "" });
   const [isCreating, setIsCreating] = useState(false);
@@ -35,7 +34,7 @@ const Groups = () => {
     getAllGroups();
   }, []);
 
-  // --- HANDLER TO CREATE GROUP ---
+  // handlers
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     if (!createForm.name.trim()) {
@@ -52,9 +51,9 @@ const Groups = () => {
         type: "success",
         text: "Group created successfully!",
       });
-      setCreateForm({ name: "", description: "" }); // Reset form
-      setIsCreateModalOpen(false); // Close modal
-      getAllGroups(); // Refresh the list to show the new group
+      setCreateForm({ name: "", description: "" });
+      setIsCreateModalOpen(false);
+      getAllGroups();
     } catch (err) {
       setActionMessage({
         type: "error",
@@ -62,7 +61,7 @@ const Groups = () => {
       });
     } finally {
       setIsCreating(false);
-      // Clear success/error message after 3 seconds
+      // success message claered after 3 sec
       setTimeout(() => setActionMessage({ type: "", text: "" }), 3000);
     }
   };
@@ -71,7 +70,7 @@ const Groups = () => {
     <div className="flex flex-col gap-6 pb-24">
       <h1 className="text-2xl font-bold text-text-inverse">Your Groups</h1>
 
-      {/* Global Action Messages */}
+      {/* globalMessageAction */}
       {actionMessage.text && (
         <div
           className={`p-3 rounded-lg text-sm font-medium w-fit transition-all ${
@@ -84,19 +83,18 @@ const Groups = () => {
         </div>
       )}
 
-      {/* Loading State */}
+      {/* lodaing and error */}
       {isLoading && (
         <div className="text-text-muted animate-pulse">Loading groups...</div>
       )}
 
-      {/* Error State */}
       {error && (
         <div className="mb-4 p-3 bg-red-500/10 text-red-500 border border-red-500/50 rounded-lg text-sm w-fit">
           {error}
         </div>
       )}
 
-      {/* Populated State */}
+      {/* group list */}
       {!isLoading && !error && groups.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {groups.map((group) => (
@@ -135,7 +133,7 @@ const Groups = () => {
         </div>
       )}
 
-      {/* Empty State */}
+      {/* No groups */}
       {!isLoading && !error && groups.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-800/20 border border-gray-700 border-dashed rounded-xl">
           <p className="text-text-muted mb-2">
@@ -150,7 +148,7 @@ const Groups = () => {
         </div>
       )}
 
-      {/* --- CREATE GROUP MODAL --- */}
+      {/* create group pop up */}
       {isCreateModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
@@ -244,7 +242,7 @@ const Groups = () => {
         </div>
       )}
 
-      {/* --- FLOATING ACTION BUTTON (Create Group) --- */}
+      {/* create group */}
       <button
         onClick={() => setIsCreateModalOpen(true)}
         className="fixed bottom-10 right-10 flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white px-5 py-4 rounded-full shadow-lg shadow-primary-500/30 transition-all hover:scale-105 z-40 group"
