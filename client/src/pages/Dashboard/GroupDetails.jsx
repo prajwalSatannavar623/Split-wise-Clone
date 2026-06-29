@@ -17,7 +17,6 @@ const GroupDetails = () => {
   const [activeTab, setActiveTab] = useState("expenses");
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
-  // --- NEW STATE FOR ADD MEMBER ---
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -27,29 +26,30 @@ const GroupDetails = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", description: "" });
 
-  const fetchGroupDetails = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await apiClient.get(`/groups/${groupId}`);
-      setGroup(response.data.data);
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to load group details.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const openEditModal = () => {
     setEditForm({ name: group.name, description: group.description });
     setIsEditModalOpen(true);
   };
 
   useEffect(() => {
+    const fetchGroupDetails = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await apiClient.get(`/groups/${groupId}`);
+        setGroup(response.data.data);
+      } catch (err) {
+        setError(
+          err.response?.data?.message || "Failed to load group details.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
     fetchGroupDetails();
   }, [groupId]);
 
-  // --- LIVE SEARCH (DEBOUNCED) ---
+  // debouncing
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
@@ -71,7 +71,7 @@ const GroupDetails = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  // --- ADD MEMBER HANDLER ---
+  // add memeber
   const handleAddMember = async (userIdToAdd) => {
     try {
       await apiClient.post(`/groups/${groupId}/add-member`, { userIdToAdd });
@@ -96,7 +96,7 @@ const GroupDetails = () => {
     }
   };
 
-  // update group handler
+  // update group
   const handleUpdateGroup = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -123,7 +123,7 @@ const GroupDetails = () => {
     }
   };
 
-  // Authorization checks
+  // Authorization
   const isAdmin = group?.admin === currentUser?._id;
 
   if (isLoading)
@@ -135,7 +135,7 @@ const GroupDetails = () => {
 
   return (
     <div className="flex flex-col gap-8 max-w-4xl pb-24">
-      {/* --- HEADER SECTION --- */}
+      {/*header*/}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 p-6 bg-gray-800/40 border border-gray-700 rounded-xl relative overflow-hidden">
         <div className="absolute -top-10 -right-10 text-[120px] font-black text-gray-800/20 select-none pointer-events-none">
           {group.name?.charAt(0).toUpperCase()}
@@ -157,7 +157,7 @@ const GroupDetails = () => {
           <div className="flex gap-3 mt-4 md:mt-0 z-10">
             <Button
               variant="outline"
-              onClick={openEditModal} // Connect the button
+              onClick={openEditModal}
               className="border-gray-600 text-gray-300 bg-gray-900/50"
             >
               Edit Group
@@ -172,9 +172,7 @@ const GroupDetails = () => {
         )}
       </div>
 
-      {/* --- MAIN SECTION (TABS) --- */}
       <div className="flex flex-col gap-4">
-        {/* Tab Navigation */}
         <div className="flex gap-6 border-b border-gray-800">
           <button
             onClick={() => setActiveTab("expenses")}
@@ -198,7 +196,7 @@ const GroupDetails = () => {
           </button>
         </div>
 
-        {/* Tab Content: EXPENSES */}
+        {/*expenses*/}
         {activeTab === "expenses" && (
           <div className="flex flex-col gap-3">
             {group.expenses?.length > 0 ? (
@@ -291,9 +289,8 @@ const GroupDetails = () => {
                         )}
                       </div>
 
-                      {/* --- ACTION BUTTONS (VIEW & EDIT) --- */}
+                      {/*view and edit options*/}
                       <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                        {/* 1. VIEW BUTTON - Visible to ALL members */}
                         <button
                           onClick={() =>
                             navigate(`/dashboard/expenses/${expense._id}`)
@@ -316,7 +313,7 @@ const GroupDetails = () => {
                           </svg>
                         </button>
 
-                        {/* 2. EDIT BUTTON - Visible ONLY to Admin or Payer */}
+                        {/* edit botton conditional */}
                         {canEdit && (
                           <button
                             onClick={() =>
@@ -353,7 +350,7 @@ const GroupDetails = () => {
           </div>
         )}
 
-        {/* Tab Content: BALANCES */}
+        {/* balances */}
         {activeTab === "balances" && (
           <div className="flex flex-col gap-3">
             {group.balances?.length > 0 ? (
@@ -424,7 +421,7 @@ const GroupDetails = () => {
         )}
       </div>
 
-      {/* --- ADD MEMBER MODAL (LIVE SEARCH) --- */}
+      {/* add member */}
       {isAddMemberModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
@@ -562,7 +559,7 @@ const GroupDetails = () => {
         </div>
       )}
 
-      {/* --- MEMBERS VIEW MODAL (EXISTING) --- */}
+      {/* members view */}
       {isMembersModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
@@ -621,7 +618,7 @@ const GroupDetails = () => {
         </div>
       )}
 
-      {/* --- GROUP INFO EDIT MODAL MODAL (EXISTING) --- */}
+      {/* group update info */}
       {isEditModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
@@ -670,7 +667,7 @@ const GroupDetails = () => {
         </div>
       )}
 
-      {/* --- FLOATING ACTION BUTTON (Add Expense) --- */}
+      {/* add expense */}
       <button
         onClick={() => navigate(`/dashboard/groups/${groupId}/add-expense`)}
         className="fixed bottom-10 right-10 flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white px-5 py-4 rounded-full shadow-lg shadow-primary-500/30 transition-all hover:scale-105 z-40 group"
