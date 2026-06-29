@@ -18,7 +18,6 @@ const ExpenseDetails = () => {
       setIsLoading(true);
       setError(null);
       try {
-        // Assuming your backend has an endpoint to get a single expense by ID
         const response = await apiClient.get(`/expenses/${expenseId}`);
         setExpense(response.data.data);
       } catch (err) {
@@ -66,7 +65,6 @@ const ExpenseDetails = () => {
     ? expense.category.charAt(0).toUpperCase()
     : "O";
 
-  // Format the date nicely
   const formattedDate = new Date(
     expense.createdAt || expense.date,
   ).toLocaleDateString("en-US", {
@@ -78,7 +76,6 @@ const ExpenseDetails = () => {
 
   return (
     <div className="p-6 max-w-2xl flex flex-col gap-6">
-      {/* Back Button */}
       <button
         onClick={() => navigate(-1)}
         className="text-primary-500 hover:text-primary-400 text-sm font-medium flex items-center gap-1 w-fit transition-colors"
@@ -100,7 +97,6 @@ const ExpenseDetails = () => {
 
       {/* Main Card */}
       <div className="flex flex-col bg-gray-800/40 border border-gray-700 rounded-xl overflow-hidden shadow-lg">
-        {/* Top Section: Icon, Title, and Amount */}
         <div className="flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8 border-b border-gray-800 bg-gray-800/60">
           <div className="w-20 h-20 rounded-2xl bg-gray-700/80 border-2 border-gray-600 flex items-center justify-center font-bold text-4xl text-gray-300 shadow-inner shrink-0">
             {categoryInitial}
@@ -122,7 +118,7 @@ const ExpenseDetails = () => {
           </div>
         </div>
 
-        {/* Middle Section: Who Paid */}
+        {/* who paid*/}
         <div className="p-6 sm:p-8 border-b border-gray-800 flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-gray-700 border border-gray-600 overflow-hidden flex items-center justify-center text-white shrink-0">
             {expense.paidBy?.avatar ? (
@@ -152,7 +148,7 @@ const ExpenseDetails = () => {
           </div>
         </div>
 
-        {/* Bottom Section: Split Breakdown */}
+        {/*split breakdown*/}
         <div className="p-6 sm:p-8 flex flex-col gap-4">
           <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">
             Split Details
@@ -161,12 +157,11 @@ const ExpenseDetails = () => {
           <div className="flex flex-col gap-3">
             {expense.splitInfo?.map((split) => {
               const user = split.userId;
-              if (!user) return null; // Safety check
+              if (!user) return null;
 
               const isMe = user._id === currentUser?._id;
               const shareAmount = Number(split.shareAmount).toFixed(2);
 
-              // Highlight the row slightly if it's the current user
               return (
                 <div
                   key={user._id}
