@@ -10,7 +10,7 @@ The data layer is built with **Mongoose** to enforce schema validation and encap
 
 ## 1. User Model (`User`)
 
-### Entity Overview
+### User Entity Overview
 
 The central identity and authentication entity. Manages credentials, profile metadata, and subscription tiers.
 
@@ -33,7 +33,7 @@ The central identity and authentication entity. Manages credentials, profile met
 
 ## 2. Expense Model (`Expense`)
 
-### Entity Overview
+### Expense Entity Overview
 
 The `Expense` model tracks individual financial transactions within a group. It is designed to handle complex cost-sharing scenarios, moving beyond simple equality to support percentage-based and custom split strategies.
 
@@ -58,7 +58,7 @@ The `Expense` model tracks individual financial transactions within a group. It 
 
 ## 3. Group Model (`Group`)
 
-### Entity Overview
+### Group Entity Overview
 
 The `Group` model serves as the central container for collaborative financial activities. It manages membership, administrative control, and the aggregated financial state (balances) of all participants within a specific shared context.
 
@@ -87,7 +87,7 @@ The `Group` model serves as the central container for collaborative financial ac
 
 ## 4. Settlement Model (`Settlement`)
 
-### Entity Overview
+### Settlement Entity Overview
 
 The `Settlement` model represents the finalization of debt between two users within a group. Unlike an `Expense`, which records a shared cost, a `Settlement` records a specific payment action taken to resolve outstanding balances.
 
