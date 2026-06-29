@@ -1,18 +1,12 @@
 import { Router } from "express";
 import { verifyToken } from "../middlewares/auth.middleware.js";
 
-import {
-  getCurrentUserBalance,
-  getUserBalanceWithOther,
-  getCurrentUserBalancesDetailed,
-} from "../controllers/settlement.controller.js";
+import { getCurrentUserBalance } from "../controllers/settlement.controller.js";
 
 const router = Router();
 
+// static routes
+// self routes
 router.route("/me/balances").get(verifyToken, getCurrentUserBalance);
-router.route("/:userId/balances").get(verifyToken, getUserBalanceWithOther);
-router
-  .route("/me/balances/detailed")
-  .get(verifyToken, getCurrentUserBalancesDetailed);
 
 export default router;

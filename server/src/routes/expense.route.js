@@ -3,12 +3,10 @@ import {
   createExpense,
   getExpenseById,
   updateExpense,
-  deleteExpense,
-  getGroupExpenses,
   getCurrentUserExpenses,
-  searchExpenses,
 } from "../controllers/expense.controller.js";
 import { verifyToken } from "../middlewares/auth.middleware.js";
+
 import {
   verifyMembership,
   verifyGroupAdmin,
@@ -16,16 +14,12 @@ import {
 
 const router = Router();
 
-router.route("/:groupId").post(verifyToken, verifyMembership, createExpense);
-router.route("/:expenseId").get(verifyToken, getExpenseById);
-
-router.route("/:expenseId").put(verifyToken, updateExpense);
-router.route("/:expenseId").delete(verifyToken, deleteExpense);
-
-router
-  .route("/group/:groupId")
-  .get(verifyToken, verifyMembership, getGroupExpenses);
+// Static routes
 router.route("/user/me").get(verifyToken, getCurrentUserExpenses);
-router.route("/search/all").get(verifyToken, searchExpenses);
+
+// Dynamic routes
+router.route("/:expenseId").get(verifyToken, getExpenseById);
+router.route("/:expenseId").put(verifyToken, updateExpense);
+router.route("/:groupId").post(verifyToken, verifyMembership, createExpense);
 
 export default router;
