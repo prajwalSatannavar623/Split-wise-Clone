@@ -28,11 +28,6 @@ const expenseSchema = new Schema(
       required: true,
       min: 0,
     },
-    currencyType: {
-      type: String,
-      enum: ["INR", "USD"],
-      default: "INR",
-    },
     paidBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
@@ -45,7 +40,7 @@ const expenseSchema = new Schema(
     },
     splitStrategy: {
       type: String,
-      enum: ["EQUAL", "UNEQUAL", "PERCENTAGE"],
+      enum: ["EQUAL", "PERCENTAGE"],
       default: "EQUAL",
     },
     splitInfo: [

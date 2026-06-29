@@ -31,24 +31,7 @@ const userSchema = new Schema(
       type: String, // cloudinary service
       required: true,
     },
-    One2OneExpense: [
-      {
-        userId: {
-          type: Schema.Types.ObjectId,
-          ref: "User",
-        },
-        amount: {
-          type: Number,
-        },
-      },
-    ],
     groupsIn: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Group",
-      },
-    ],
-    favGroups: [
       {
         type: Schema.Types.ObjectId,
         ref: "Group",
@@ -66,18 +49,19 @@ const userSchema = new Schema(
   { timestamps: true },
 );
 
-// hash password whenever it is modified
+// hash if password is modified
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   this.password = await bcrypt.hash(this.password, 10);
 });
 
-// injecting the custom methods into userSchema
+// password check
 userSchema.methods.isPasswordCorrect = async function (password) {
   const isMatch = await bcrypt.compare(password, this.password);
   return isMatch;
 };
 
+// generate accessToken
 userSchema.methods.generateAccessToken = function () {
   return jwt.sign(
     {
@@ -93,6 +77,7 @@ userSchema.methods.generateAccessToken = function () {
   );
 };
 
+// generating refreshToken
 userSchema.methods.generateRefreshToken = function () {
   return jwt.sign(
     {
