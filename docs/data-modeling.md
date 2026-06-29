@@ -14,7 +14,7 @@ The data layer is built with **Mongoose** to enforce schema validation and encap
 
 The central identity and authentication entity. Manages credentials, profile metadata, and subscription tiers.
 
-### Schema Definitions
+### User Schema Definitions
 
 | Field      | Type       | Attributes       | Description                        |
 | :--------- | :--------- | :--------------- | :--------------------------------- |
@@ -37,7 +37,7 @@ The central identity and authentication entity. Manages credentials, profile met
 
 The `Expense` model tracks individual financial transactions within a group. It is designed to handle complex cost-sharing scenarios, moving beyond simple equality to support percentage-based and custom split strategies.
 
-### Schema Definitions
+### Expense Schema Definitions
 
 | Field           | Type     | Attributes              | Description                                   |
 | :-------------- | :------- | :---------------------- | :-------------------------------------------- |
@@ -62,7 +62,7 @@ The `Expense` model tracks individual financial transactions within a group. It 
 
 The `Group` model serves as the central container for collaborative financial activities. It manages membership, administrative control, and the aggregated financial state (balances) of all participants within a specific shared context.
 
-### Schema Definitions
+### Group Schema Definitions
 
 | Field      | Type       | Attributes     | Description                                    |
 | :--------- | :--------- | :------------- | :--------------------------------------------- |
@@ -91,7 +91,7 @@ The `Group` model serves as the central container for collaborative financial ac
 
 The `Settlement` model represents the finalization of debt between two users within a group. Unlike an `Expense`, which records a shared cost, a `Settlement` records a specific payment action taken to resolve outstanding balances.
 
-### Schema Definitions
+### Settlement Schema Definitions
 
 | Field         | Type     | Attributes           | Description                                    |
 | :------------ | :------- | :------------------- | :--------------------------------------------- |
