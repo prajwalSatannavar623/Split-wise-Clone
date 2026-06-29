@@ -13,7 +13,7 @@ const UserProfile = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Fetch both endpoints in parallel for faster loading
+        // Fetch both endpoints
         const [profileRes, groupsRes] = await Promise.all([
           apiClient.get(`/users/${userId}`),
           apiClient.get(`/users/${userId}/groups`),
@@ -46,7 +46,7 @@ const UserProfile = () => {
         ← Back
       </button>
 
-      {/* Profile Header */}
+      {/* profile header */}
       <div className="flex items-center gap-6 p-6 bg-gray-800/40 border border-gray-700 rounded-xl">
         <img
           src={userInfo.avatar}
@@ -61,7 +61,7 @@ const UserProfile = () => {
         </div>
       </div>
 
-      {/* Common Groups Section */}
+      {/* commom groups */}
       <div className="bg-gray-800/40 border border-gray-700 rounded-xl p-6">
         <h2 className="text-lg font-bold text-text-inverse mb-4">
           Common Groups
@@ -85,7 +85,7 @@ const UserProfile = () => {
         )}
       </div>
 
-      {/* Transaction Balances Section */}
+      {/* balances */}
       <div className="bg-gray-800/40 border border-gray-700 rounded-xl p-6">
         <h2 className="text-lg font-bold text-text-inverse mb-4">
           Transaction Balances
