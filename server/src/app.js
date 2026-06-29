@@ -20,6 +20,8 @@ app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
+
+// review this later
 app.use((req, res, next) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
   next();
@@ -28,13 +30,11 @@ app.use((req, res, next) => {
 // routes import
 import userRoute from "./routes/user.route.js";
 import groupRoute from "./routes/group.route.js";
-import favGroupRoute from "./routes/favGroup.route.js";
 import expenseRoute from "./routes/expense.route.js";
 import settlementRoute from "./routes/settlement.route.js";
 
 app.use("/api/v1/users", userRoute);
 app.use("/api/v1/groups", groupRoute);
-app.use("/api/v1/fav-groups", favGroupRoute);
 app.use("/api/v1/expenses", expenseRoute);
 app.use("/api/v1/settlements", settlementRoute);
 
