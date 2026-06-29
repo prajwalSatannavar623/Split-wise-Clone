@@ -2,7 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { globalErrorHandler } from "./utils/GlobalErrorHandler.js";
+import { globalErrorHandler } from "./utils/globalErrorHandler.js";
 
 const app = express();
 
