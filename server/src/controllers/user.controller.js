@@ -379,7 +379,6 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
   const user = await User.findById(userId)
     .populate("groupsIn", "name _id")
-    .populate("favGroups", "name _id")
     .select("-password -refreshToken");
 
   if (!user) {
