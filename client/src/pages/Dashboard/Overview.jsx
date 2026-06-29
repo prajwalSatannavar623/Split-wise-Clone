@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "../../api/axios.js";
-import Button from "../../components/Button.jsx";
 
 const Overview = () => {
   const [totalBalance, setTotalExpense] = useState("");
@@ -10,30 +9,29 @@ const Overview = () => {
   const [isLoading, setIsloading] = useState(false);
   const [error, setError] = useState(null);
 
-  const getBalanceOverview = async () => {
-    setIsloading(true);
-    setError(null);
-
-    try {
-      const response = await apiClient.get("/settlements/me/balances");
-
-      const { netBalance, totalOwed, totalOwes } = response.data.data;
-
-      setTotalExpense(netBalance);
-      setOweAmount(totalOwes);
-      setOwedAmount(totalOwed);
-
-      console.log("Success:", response.data);
-    } catch (err) {
-      const backendErrorMessage =
-        err.response?.data?.message || "Failed to load balances.";
-      setError(backendErrorMessage);
-    } finally {
-      setIsloading(false);
-    }
-  };
-
   useEffect(() => {
+    const getBalanceOverview = async () => {
+      setIsloading(true);
+      setError(null);
+
+      try {
+        const response = await apiClient.get("/settlements/me/balances");
+
+        const { netBalance, totalOwed, totalOwes } = response.data.data;
+
+        setTotalExpense(netBalance);
+        setOweAmount(totalOwes);
+        setOwedAmount(totalOwed);
+
+        console.log("Success:", response.data);
+      } catch (err) {
+        const backendErrorMessage =
+          err.response?.data?.message || "Failed to load balances.";
+        setError(backendErrorMessage);
+      } finally {
+        setIsloading(false);
+      }
+    };
     getBalanceOverview();
   }, []);
 
