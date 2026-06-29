@@ -5,7 +5,7 @@ import { apiClient } from "../../api/axios.js";
 const Activity = () => {
   const currentUser = useSelector((state) => state.auth.user);
 
-  const [activeTab, setActiveTab] = useState("all"); // "all", "paid", or "owed"
+  const [activeTab, setActiveTab] = useState("all");
   const [expenses, setExpenses] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -15,7 +15,7 @@ const Activity = () => {
       setIsLoading(true);
       setError(null);
       try {
-        // Send the type as a query parameter (empty string for 'all')
+        // (empty string for 'all')
         const typeQuery = activeTab === "all" ? "" : `?type=${activeTab}`;
         const response = await apiClient.get(`/expenses/user/me${typeQuery}`);
 
@@ -28,7 +28,7 @@ const Activity = () => {
     };
 
     fetchActivity();
-  }, [activeTab]); // Refetch whenever the tab changes
+  }, [activeTab]);
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl pb-12">
@@ -41,7 +41,7 @@ const Activity = () => {
         </p>
       </div>
 
-      {/* --- FILTER TABS --- */}
+      {/*FILTER TABS*/}
       <div className="flex gap-4 p-1 bg-gray-900/50 rounded-lg w-fit border border-gray-800">
         {["all", "paid", "owed"].map((tab) => (
           <button
@@ -58,7 +58,7 @@ const Activity = () => {
         ))}
       </div>
 
-      {/* --- ERROR / LOADING STATES --- */}
+      {/*error and loading states */}
       {error && (
         <div className="p-4 bg-red-500/10 text-red-500 border border-red-500/50 rounded-lg text-sm">
           {error}
@@ -75,11 +75,10 @@ const Activity = () => {
           ))}
         </div>
       ) : (
-        /* --- EXPENSE LIST --- */
+        /*expense */
         <div className="flex flex-col gap-4 mt-2">
           {expenses.length > 0 ? (
             expenses.map((expense) => {
-              // Logic for "You" vs "Other Person"
               const isPaidByMe = expense.paidBy?._id === currentUser?._id;
               const paidByName = isPaidByMe ? "You" : expense.paidBy?.fullName;
               const amountColor = isPaidByMe
@@ -100,7 +99,6 @@ const Activity = () => {
                   className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-gray-800/30 border border-gray-800 rounded-xl hover:bg-gray-800/60 transition-colors"
                 >
                   <div className="flex flex-col gap-2">
-                    {/* Group Badge */}
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-gray-700 text-gray-300 font-semibold w-fit">
                         {expense.group?.name || "Unknown Group"}
@@ -108,7 +106,7 @@ const Activity = () => {
                       <span className="text-xs text-gray-500">{dateAdded}</span>
                     </div>
 
-                    {/* Expense Details */}
+                    {/*expense details*/}
                     <div>
                       <p className="text-lg font-medium text-text-inverse leading-tight">
                         {expense.description}
@@ -128,7 +126,6 @@ const Activity = () => {
                     </div>
                   </div>
 
-                  {/* Amount Display */}
                   <div className={`text-2xl font-bold ${amountColor} shrink-0`}>
                     {expense.currencyType === "USD" ? "$" : "₹"}
                     {expense.amount}
