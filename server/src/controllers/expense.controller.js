@@ -18,7 +18,6 @@ const createExpense = asyncHandler(async (req, res) => {
   const {
     description,
     amount,
-    currencyType = "INR",
     paidBy,
     splitStrategy = "EQUAL",
     splitInfo,
@@ -72,7 +71,6 @@ const createExpense = asyncHandler(async (req, res) => {
     const expense = new Expense({
       description,
       amount,
-      currencyType,
       paidBy,
       group: groupId,
       splitStrategy,
@@ -145,76 +143,9 @@ const getExpenseById = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, expense, "Expense retrieved successfully"));
 });
 
-const getGroupExpenses = asyncHandler(async (req, res) => {
-  const groupId = req.group._id;
-  const {
-    startDate,
-    endDate,
-    limit = 20,
-    offset = 0,
-    category,
-    sortBy = "createdAt",
-    sortOrder = "inc",
-  } = req.query;
-
-  if (!mongoose.Types.ObjectId.isValid(groupId)) {
-    throw new ApiError(400, "Invalid group ID");
-  }
-
-  // Build query
-  const query = { group: groupId };
-
-  if (startDate || endDate) {
-    query.createdAt = {};
-    if (startDate) {
-      query.createdAt.$gte = new Date(startDate);
-    }
-    if (endDate) {
-      query.createdAt.$lte = new Date(endDate);
-    }
-  }
-
-  if (category) {
-    query.category = category;
-  }
-
-  // Build sort object
-  const sortObj = {};
-  sortObj[sortBy] = sortOrder === "desc" ? -1 : 1;
-
-  const totalExpenses = await Expense.countDocuments(query);
-
-  const expenses = await Expense.find(query)
-    .sort(sortObj)
-    .limit(parseInt(limit))
-    .skip(parseInt(offset))
-    .populate("paidBy", "name email avatar")
-    .populate("splitInfo.userId", "name email");
-
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        expenses,
-        total: totalExpenses,
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-      },
-      "Expenses retrieved successfully",
-    ),
-  );
-});
-
 const updateExpense = asyncHandler(async (req, res) => {
   const { expenseId } = req.params;
-  const {
-    description,
-    amount,
-    currencyType,
-    splitStrategy,
-    splitInfo,
-    category,
-  } = req.body;
+  const { description, amount, splitStrategy, splitInfo, category } = req.body;
   const userId = req.user._id.toString();
 
   if (!mongoose.Types.ObjectId.isValid(expenseId)) {
@@ -251,7 +182,6 @@ const updateExpense = asyncHandler(async (req, res) => {
     // Update expense fields
     if (description) expense.description = description;
     if (amount) expense.amount = amount;
-    if (currencyType) expense.currencyType = currencyType;
     if (category) expense.category = category;
     if (splitStrategy) expense.splitStrategy = splitStrategy;
 
@@ -306,134 +236,6 @@ const updateExpense = asyncHandler(async (req, res) => {
     session.endSession();
   }
 });
-
-// not being used
-const deleteExpense = asyncHandler(async (req, res) => {
-  const { expenseId } = req.params;
-  const userId = req.user._id.toString();
-
-  if (!mongoose.Types.ObjectId.isValid(expenseId)) {
-    throw new ApiError(400, "Invalid expense ID");
-  }
-
-  const expense = await Expense.findById(expenseId);
-  if (!expense) {
-    throw new ApiError(404, "Expense not found");
-  }
-
-  // Check permissions
-  const group = await Group.findById(expense.group);
-  const isAdmin = group.admin.toString() === userId;
-  const isPaidBy = expense.paidBy.toString() === userId;
-
-  if (!isAdmin && !isPaidBy) {
-    throw new ApiError(403, "You don't have permission to delete this expense");
-  }
-
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    const groupId = expense.group.toString();
-
-    // Delete expense
-    await Expense.findByIdAndDelete(expenseId, { session });
-
-    // Remove expense from group
-    await Group.findByIdAndUpdate(
-      groupId,
-      {
-        $pull: { expenses: expenseId },
-      },
-      { session, returnDocument: "after" },
-    );
-
-    // Recalculate and update group balances (will be zero if no expenses left)
-    await updateGroupBalances(groupId, session);
-
-    await session.commitTransaction();
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, null, "Expense deleted successfully"));
-  } catch (error) {
-    await session.abortTransaction();
-    throw new ApiError(500, error.message || "Error deleting expense");
-  } finally {
-    session.endSession();
-  }
-});
-
-const getUserExpensesAggregated = async (
-  userId,
-  groupId,
-  startDate,
-  endDate,
-  limit,
-  offset,
-  res,
-) => {
-  const matchStage = {
-    $match: {
-      $or: [
-        { paidBy: new mongoose.Types.ObjectId(userId) },
-        { "splitInfo.userId": new mongoose.Types.ObjectId(userId) },
-      ],
-    },
-  };
-
-  if (groupId) {
-    matchStage.$match.group = new mongoose.Types.ObjectId(groupId);
-  }
-
-  if (startDate || endDate) {
-    matchStage.$match.createdAt = {};
-    if (startDate) {
-      matchStage.$match.createdAt.$gte = new Date(startDate);
-    }
-    if (endDate) {
-      matchStage.$match.createdAt.$lte = new Date(endDate);
-    }
-  }
-
-  const expenses = await Expense.aggregate([
-    matchStage,
-    { $sort: { createdAt: -1 } },
-    { $skip: parseInt(offset) },
-    { $limit: parseInt(limit) },
-    {
-      $lookup: {
-        from: "users",
-        localField: "paidBy",
-        foreignField: "_id",
-        as: "paidByDetails",
-      },
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "splitInfo.userId",
-        foreignField: "_id",
-        as: "userDetails",
-      },
-    },
-  ]);
-
-  const totalExpenses = await Expense.countDocuments(matchStage.$match);
-
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        expenses,
-        total: totalExpenses,
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-      },
-      "User expenses retrieved successfully",
-    ),
-  );
-};
 
 const getCurrentUserExpenses = asyncHandler(async (req, res) => {
   const userId = req.user._id;
@@ -516,110 +318,4 @@ const getCurrentUserExpenses = asyncHandler(async (req, res) => {
   );
 });
 
-const searchExpenses = asyncHandler(async (req, res) => {
-  const {
-    description,
-    minAmount,
-    maxAmount,
-    groupId,
-    category,
-    startDate,
-    endDate,
-    limit = 20,
-    offset = 0,
-  } = req.query;
-
-  console.log(req.query);
-
-  const query = {};
-
-  if (description) {
-    query.description = { $regex: description, $options: "i" };
-  }
-
-  if (minAmount || maxAmount) {
-    query.amount = {};
-    if (minAmount) {
-      query.amount.$gte = parseFloat(minAmount);
-    }
-    if (maxAmount) {
-      query.amount.$lte = parseFloat(maxAmount);
-    }
-  }
-
-  // if (groupId) {
-  //   if (!mongoose.Types.ObjectId.isValid(groupId)) {
-  //     throw new ApiError(400, "Invalid group ID");
-  //   }
-  //   query.group = groupId;
-  // }
-
-  //check group membership
-  if (groupId) {
-    if (!mongoose.Types.ObjectId.isValid(groupId)) {
-      throw new ApiError(400, "Invalid group ID");
-    }
-
-    const group = await Group.findById(groupId);
-    if (!group) {
-      throw new ApiError(404, "Group not found");
-    }
-    const isMember = group.members.some(
-      (memberId) => memberId.toString() === req.user._id.toString(),
-    );
-    if (!isMember) {
-      throw new ApiError(403, "You are not a member of this group");
-    }
-
-    query.group = groupId;
-  }
-
-  if (category) {
-    query.category = category;
-  }
-
-  if (startDate || endDate) {
-    query.createdAt = {};
-    if (startDate) {
-      query.createdAt.$gte = new Date(startDate);
-    }
-    if (endDate) {
-      query.createdAt.$lte = new Date(endDate);
-    }
-  }
-
-  const totalExpenses = await Expense.countDocuments(query);
-
-  console.log("Total expenses found:", totalExpenses);
-
-  const expenses = await Expense.find(query)
-    .sort({ createdAt: -1 })
-    .limit(parseInt(limit))
-    .skip(parseInt(offset))
-    .populate("paidBy", "name email avatar")
-    .populate("group", "name")
-    .populate("splitInfo.userId", "name email");
-
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        expenses,
-        total: totalExpenses,
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-      },
-      "Expenses found successfully",
-    ),
-  );
-});
-
-export {
-  createExpense,
-  getExpenseById,
-  getGroupExpenses,
-  updateExpense,
-  deleteExpense,
-  getCurrentUserExpenses,
-  searchExpenses,
-};
+export { createExpense, getExpenseById, updateExpense, getCurrentUserExpenses };
