@@ -269,24 +269,18 @@ const getCurrentUserExpenses = asyncHandler(async (req, res) => {
 
     query.group = groupId;
   } else {
-    // Optional: If no groupId is provided, explicitly limit to groups the user is in
     query.group = { $in: req.user.groupsIn };
   }
 
-  // 2. Type filtering
   if (type === "paid") {
-    // Expenses where I paid the bill
     query.paidBy = userId;
   } else if (type === "owed") {
-    // Expenses where I am part of the split, BUT someone else paid the bill
     query["splitInfo.userId"] = userId;
-    query.paidBy = { $ne: userId }; // <-- THIS FIXES THE BUG
+    query.paidBy = { $ne: userId };
   } else {
-    // "All" - either they paid, or they are in the split info
     query.$or = [{ paidBy: userId }, { "splitInfo.userId": userId }];
   }
 
-  // 3. Date filtering
   if (startDate || endDate) {
     query.createdAt = {};
     if (startDate) query.createdAt.$gte = new Date(startDate);
@@ -295,7 +289,6 @@ const getCurrentUserExpenses = asyncHandler(async (req, res) => {
 
   const totalExpenses = await Expense.countDocuments(query);
 
-  // 4. Fetch and populate consistently using your actual schema fields (fullName)
   const expenses = await Expense.find(query)
     .sort({ createdAt: -1 })
     .limit(parseInt(limit))

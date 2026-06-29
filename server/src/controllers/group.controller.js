@@ -81,45 +81,6 @@ const addMember = asyncHandler(async (req, res) => {
     );
 });
 
-const deleteGroup = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
-
-  // Check if all balances are settled
-  const group = await Group.findById(groupId);
-
-  if (!group) {
-    throw new ApiError(404, "Group Not Found");
-  }
-
-  const hasUnsettledBalances = group.balances?.some(
-    (balance) => balance.amount !== 0,
-  );
-
-  if (hasUnsettledBalances) {
-    throw new ApiError(
-      400,
-      "All expenses are not settled yet. Cannot delete the group.",
-    );
-  }
-
-  // Delete the group from the groupsIn array of all members
-  await User.updateMany(
-    { _id: { $in: group.members } },
-    { $pull: { groupsIn: groupId } },
-  );
-
-  // Delete the group from the database
-  const deletedGroup = await Group.findByIdAndDelete(groupId);
-
-  if (!deletedGroup) {
-    throw new ApiError(500, "Error while deleting the group");
-  }
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, null, "Group deleted successfully"));
-});
-
 const getGroupDetails = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
 
@@ -129,13 +90,12 @@ const getGroupDetails = asyncHandler(async (req, res) => {
 
   // 1. Fetch and deeply populate the group
   const group = await Group.findById(groupId)
-    .populate("members", "fullName userName email avatar") // Get member details
-    .populate("balances.from", "fullName userName avatar") // Get who owes
-    .populate("balances.to", "fullName userName avatar") // Get who is owed
+    .populate("members", "fullName userName email avatar")
+    .populate("balances.from", "fullName userName avatar")
+    .populate("balances.to", "fullName userName avatar")
     .populate({
       path: "expenses",
-      options: { sort: { createdAt: -1 } }, // Sort expenses by newest first
-      // Assuming your expense schema has a 'paidBy' field referencing User
+      options: { sort: { createdAt: -1 } },
       populate: { path: "paidBy", select: "fullName avatar" },
     });
 
@@ -143,7 +103,6 @@ const getGroupDetails = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Group Not Found");
   }
 
-  // 2. Because 'members' is now populated (an array of objects), we must map to check IDs
   const isMember = group.members.some(
     (member) => member._id.toString() === req.user._id.toString(),
   );
@@ -199,213 +158,4 @@ const updateGroup = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, UpdatedGroup, "Group updated successfully"));
 });
 
-const removeMember = asyncHandler(async (req, res) => {
-  const { userIdToRemove } = req.body;
-  const { groupId } = req.params;
-
-  if (!userIdToRemove) {
-    throw new ApiError(400, "No userIdToRemove Found");
-  }
-
-  const group = await Group.findById(groupId);
-
-  if (!group) {
-    throw new ApiError(404, "Group Not Found");
-  }
-
-  // admin cannot remove themselves from the group as of now
-  if (userIdToRemove.toString() === group.admin.toString()) {
-    throw new ApiError(400, "Admin cannot remove themselves from the group");
-  }
-
-  if (!group.members.includes(userIdToRemove)) {
-    throw new ApiError(400, "User is not a member of this group");
-  }
-
-  // check all balances are cleared or not:
-  const hasUnsettledBalances = group.balances.some((balance) => {
-    const isInvolved =
-      balance.from.toString() === userIdToRemove.toString() ||
-      balance.to.toString() === userIdToRemove.toString();
-
-    return isInvolved && balance.amount !== 0;
-  });
-
-  if (hasUnsettledBalances) {
-    throw new ApiError(
-      400,
-      "User has balance settlements, cant be removed from group",
-    );
-  }
-
-  // remove the member
-  group.members = group.members.filter(
-    (id) => id.toString() !== userIdToRemove,
-  );
-  await group.save({ validateBeforeSave: false });
-
-  // Update the user's "groupsIn" array
-  await User.findByIdAndUpdate(
-    userIdToRemove,
-    { $pull: { groupsIn: groupId } },
-    { returnDocument: "after" },
-  );
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, group, "Member removed successfully"));
-});
-
-const exitGroup = asyncHandler(async (req, res) => {
-  const userIdToRemove = req.user._id;
-  const { groupId } = req.params;
-
-  if (!userIdToRemove) {
-    throw new ApiError(400, "No userIdToRemove Found");
-  }
-
-  const group = await Group.findById(groupId);
-
-  if (!group) {
-    throw new ApiError(404, "Group Not Found");
-  }
-
-  if (group.admin.toString() === userIdToRemove.toString()) {
-    throw new ApiError(400, "Admin cannot exit the group");
-  }
-
-  if (!group.members.includes(userIdToRemove)) {
-    throw new ApiError(400, "User is not a member of this group");
-  }
-
-  // check all balances are cleared or not:
-  const hasUnsettledBalances = group.balances.some((balance) => {
-    const isInvolved =
-      balance.from.toString() === userIdToRemove.toString() ||
-      balance.to.toString() === userIdToRemove.toString();
-
-    return isInvolved && balance.amount !== 0;
-  });
-
-  if (hasUnsettledBalances) {
-    throw new ApiError(
-      400,
-      "User has balance settlements, cant exit from group",
-    );
-  }
-
-  // remove the member
-  group.members = group.members.filter(
-    (id) => id.toString() !== userIdToRemove.toString(),
-  );
-  await group.save({ validateBeforeSave: false });
-
-  // Update the user's "groupsIn" array
-  await User.findByIdAndUpdate(
-    userIdToRemove,
-    { $pull: { groupsIn: groupId } },
-    { returnDocument: "after" },
-  );
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, group, "Exited from group successfully"));
-});
-
-const getGroupMembers = asyncHandler(async (req, res) => {
-  const members = await User.find({ _id: { $in: req.group.members } }).select(
-    "fullName userName email avatar",
-  );
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, members, "Group members fetched successfully"));
-});
-
-const getGroupBalances = asyncHandler(async (req, res) => {
-  const group = req.group;
-
-  if (!group) {
-    throw new ApiError(404, "Group Not Found");
-  }
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        group.balances,
-        "Group balances fetched successfully",
-      ),
-    );
-});
-
-// checking pending
-const getGroupSummary = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(groupId)) {
-    throw new ApiError(400, "Invalid group ID");
-  }
-
-  const group = await Group.findById(groupId).populate("members", "name email");
-  if (!group) {
-    throw new ApiError(404, "Group not found");
-  }
-
-  // Get all expenses in group
-  const expenses = await Expense.find({ group: groupId }).populate(
-    "paidBy",
-    "name email",
-  );
-
-  // Calculate summary
-  const summary = {
-    groupId,
-    groupName: group.name,
-    totalExpenses: expenses.length,
-    totalAmount: 0,
-    memberCount: group.members.length,
-    members: {},
-  };
-
-  // Initialize member summaries
-  group.members.forEach((member) => {
-    summary.members[member._id.toString()] = {
-      memberId: member._id,
-      name: member.name,
-      email: member.email,
-      paid: 0, // How much they paid
-      owes: 0, // How much they should pay
-      balance: 0, // paid - owes (positive = paid more, negative = owes more)
-    };
-  });
-
-  // Process each expense
-  expenses.forEach((expense) => {
-    const paidById = expense.paidBy._id.toString();
-
-    // Add to paid amount
-    summary.members[paidById].paid += expense.amount;
-    summary.totalAmount += expense.amount;
-
-    // Add to owes amount for each split
-    expense.splitInfo.forEach((split) => {
-      const userId = split.userId.toString();
-      summary.members[userId].owes += split.shareAmount;
-    });
-  });
-});
-
-export {
-  createGroup,
-  addMember,
-  deleteGroup,
-  getGroupSummary,
-  getGroupDetails,
-  updateGroup,
-  removeMember,
-  exitGroup,
-  getGroupMembers,
-  getGroupBalances,
-};
+export { createGroup, addMember, getGroupDetails, updateGroup };
