@@ -4,13 +4,10 @@ import { Expense } from "../models/expense.model.js";
 
 const calculateNetBalances = async (groupId, session) => {
   try {
-    console.log("Entered calculateNetBalances");
     const expenses = await Expense.find({ group: groupId })
       .session(session)
       .populate("paidBy", "_id")
       .populate("splitInfo.userId", "_id");
-
-    console.log("All expenses:", expenses);
 
     const balances = {};
 
@@ -52,25 +49,24 @@ const calculateNetBalances = async (groupId, session) => {
 };
 
 const getSettlementPlan = (balances) => {
-  const debtors = []; // People who owe money (positive balance)
-  const creditors = []; // People who are owed money (negative balance)
+  const debtors = []; // People who owe money
+  const creditors = []; // People who are owed money
   const settlements = [];
 
   // Separate debtors and creditors
   Object.entries(balances).forEach(([userId, balance]) => {
     if (balance > 0.01) {
-      // Account for floating point errors
       debtors.push({ userId, amount: balance });
     } else if (balance < -0.01) {
       creditors.push({ userId, amount: Math.abs(balance) });
     }
   });
 
-  // Sort to ensure consistent order
+  // Sort
   debtors.sort((a, b) => b.amount - a.amount);
   creditors.sort((a, b) => b.amount - a.amount);
 
-  // Greedy matching: match highest debtor with highest creditor
+  // Greedy matching
   let i = 0;
   let j = 0;
 
@@ -99,7 +95,6 @@ const getSettlementPlan = (balances) => {
 const calculateEqualSplit = async (amount, userIds) => {
   const shareAmount = amount / userIds.length;
 
-  // return array of objects
   return userIds.map((userId) => ({
     userId,
     shareAmount: Math.round(shareAmount * 100) / 100,
@@ -109,19 +104,16 @@ const calculateEqualSplit = async (amount, userIds) => {
 // expected splitInfo:
 // format: [{userId: <_id>, percentage:<number>}]
 const calculatePercentageSplit = async (amount, splitInfo) => {
-  console.log("entered calculatepercentageSplit");
   const totalPercentage = splitInfo.reduce(
     (sum, split) => sum + (split.percentage || 0),
     0,
   );
 
-  console.log(totalPercentage);
-
   if (Math.abs(totalPercentage - 100) > 0.01) {
     throw new Error(`Percentages must add up to 100, got ${totalPercentage}`);
   }
 
-  // retirn array of Objects
+  // return array of Objects
   return splitInfo.map((split) => ({
     userId: split.userId,
     shareAmount: Math.round(((amount * split.percentage) / 100) * 100) / 100,
@@ -131,15 +123,12 @@ const calculatePercentageSplit = async (amount, splitInfo) => {
 
 const validateSplitInfo = async (splitInfo, amount, groupId) => {
   try {
-    // Check if split amounts add up to total expense
-    console.log(splitInfo, groupId, amount);
+    // validate
 
     const totalSplit = splitInfo.reduce(
       (sum, split) => sum + split.shareAmount,
       0,
     );
-
-    console.log(totalSplit);
 
     if (Math.abs(totalSplit - amount) > 0.01) {
       throw new ApiError(
@@ -148,13 +137,10 @@ const validateSplitInfo = async (splitInfo, amount, groupId) => {
       );
     }
 
-    console.log("hello");
-
     // Verify all users are group members
     const group = await Group.findById(groupId).select("members");
 
     const memberIds = group.members;
-    console.log(memberIds);
 
     for (const split of splitInfo) {
       if (!memberIds.includes(split.userId.toString())) {
@@ -164,8 +150,6 @@ const validateSplitInfo = async (splitInfo, amount, groupId) => {
         );
       }
     }
-
-    console.log("Im prajwal");
 
     return true;
   } catch (error) {
@@ -178,13 +162,8 @@ const validateSplitInfo = async (splitInfo, amount, groupId) => {
 
 const updateGroupBalances = async (groupId, session) => {
   try {
-    console.log("Entered updateGroupBalces");
-    console.log(groupId);
-
     const balances = await calculateNetBalances(groupId, session);
     const settlementPlan = getSettlementPlan(balances);
-
-    console.log(balances, settlementPlan);
 
     // Convert settlement plan to group balance format
     const groupBalances = settlementPlan.map((settlement) => ({
