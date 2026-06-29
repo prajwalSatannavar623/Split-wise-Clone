@@ -9,9 +9,14 @@ export const globalErrorHandler = (err, req, res, next) => {
     message = `Invalid format for field: ${err.path}`;
   }
 
+  // mongo db duplicate key error
   if (err.code === 11000) {
-    statusCode = 400;
-    message = `Duplicate value entered for ${Object.keys(err.keyValue)} field`;
+    statusCode = 409;
+    const field = Object.keys(err.keyValue)[0];
+
+    const formattedField = field.charAt(0).toUpperCase() + field.slice(1);
+
+    message = `This ${formattedField} is already taken. Please choose another.`;
   }
 
   res.status(statusCode).json({
