@@ -52,6 +52,7 @@ const Login = () => {
   return (
     <>
       <div className="bg-bg-dark w-full h-screen flex flex-col gap-2 justify-center items-center">
+        <h1 className="text-heading text-text-inverse font-bold">Login in</h1>
         <form
           onSubmit={handleFormSubmit}
           className="w-full flex flex-col gap-2 justify-center items-center"

@@ -81,6 +81,9 @@ const SignUp = () => {
   return (
     <>
       <div className="bg-bg-dark w-full min-h-screen flex flex-col gap-2 justify-center items-center">
+        <h1 className="text-heading text-text-inverse font-bold">
+          Register here
+        </h1>
         <label className="cursor-pointer">
           {/* The Visual UI */}
           <div className="w-32 h-32 rounded-full border-2 border-primary-500 flex items-center justify-center overflow-hidden bg-gray-800">
