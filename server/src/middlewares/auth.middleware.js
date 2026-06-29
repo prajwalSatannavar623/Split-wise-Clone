@@ -29,18 +29,4 @@ const verifyToken = asyncHandler(async (req, res, next) => {
   }
 });
 
-// const authorize = asyncHandler(async (req, res, next) => {
-//   // always after authenticated
-//   const { userId } = req.params;
-
-//   if (!userId) {
-//     throw new ApiError(400, "No userId found");
-//   }
-
-//   if (userId !== req.user._id.toString()) {
-//     throw new ApiError(403, "Cannot access other users data");
-//   }
-//   next();
-// });
-
 export { verifyToken };
