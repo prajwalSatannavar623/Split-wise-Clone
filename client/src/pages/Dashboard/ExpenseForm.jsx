@@ -24,7 +24,7 @@ const ExpenseForm = () => {
 
   const isEditMode = Boolean(expenseId);
 
-  // Form State
+  // form states
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [currencyType, setCurrencyType] = useState("INR");
@@ -33,12 +33,11 @@ const ExpenseForm = () => {
   const [splitStrategy, setSplitStrategy] = useState("EQUAL");
   const [percentages, setPercentages] = useState({});
 
-  // Data States
+  // data states
   const [groupMembers, setGroupMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // 1. Fetch data on mount
   useEffect(() => {
     const fetchInitialData = async () => {
       setIsLoading(true);
@@ -60,7 +59,6 @@ const ExpenseForm = () => {
           setPaidBy(expense.paidBy._id);
           setSplitStrategy(expense.splitStrategy);
 
-          // If editing a percentage expense, pre-fill the percentages state
           if (expense.splitStrategy === "PERCENTAGE" && expense.splitInfo) {
             const loadedPercentages = {};
             expense.splitInfo.forEach((info) => {
@@ -89,9 +87,9 @@ const ExpenseForm = () => {
     };
 
     fetchInitialData();
-  }, [groupId, expenseId, isEditMode, currentUser]);
+  }, [groupId, expenseId, isEditMode, currentUser, paidBy]);
 
-  // 2. Handle Form Submission
+  // handlers
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -107,7 +105,6 @@ const ExpenseForm = () => {
 
     let splitInfo = [];
 
-    // --- STRATEGY LOGIC APPLIED HERE ---
     if (splitStrategy === "EQUAL") {
       const splitAmount = numAmount / groupMembers.length;
       splitInfo = groupMembers.map((member) => ({
@@ -115,13 +112,12 @@ const ExpenseForm = () => {
         shareAmount: Number(splitAmount.toFixed(2)),
       }));
     } else if (splitStrategy === "PERCENTAGE") {
-      // Validate that total percentage equals exactly 100
+      // Validate that total percentage equal to 100
       const totalPercentage = Object.values(percentages).reduce(
         (sum, val) => sum + (val || 0),
         0,
       );
 
-      // Using Math.abs to account for minor floating point rounding issues
       if (Math.abs(totalPercentage - 100) > 0.01) {
         setError(
           `Total percentage must equal 100%. Currently at ${totalPercentage}%.`,
@@ -191,7 +187,6 @@ const ExpenseForm = () => {
       )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-        {/* Basic Info Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1">
             <label className="text-sm text-text-muted">Description</label>
@@ -214,7 +209,6 @@ const ExpenseForm = () => {
                 className="bg-gray-800 border border-gray-700 text-text-inverse p-3 rounded-l-lg focus:outline-none"
               >
                 <option value="INR">₹</option>
-                <option value="USD">$</option>
               </select>
               <input
                 type="number"
@@ -263,7 +257,6 @@ const ExpenseForm = () => {
           </div>
         </div>
 
-        {/* Split Strategy Section */}
         <div className="flex flex-col gap-2 p-4 bg-gray-800/30 border border-gray-700 rounded-xl mt-2">
           <label className="text-sm font-medium text-text-inverse mb-2">
             Split Options
@@ -285,7 +278,6 @@ const ExpenseForm = () => {
             ))}
           </div>
 
-          {/* Dynamic Split Preview */}
           <div className="flex flex-col gap-2">
             {groupMembers.map((member) => {
               let displayAmount = 0;
@@ -316,7 +308,6 @@ const ExpenseForm = () => {
                     </span>
                   </div>
 
-                  {/* UI updated for percentage input */}
                   {splitStrategy === "EQUAL" ? (
                     <span className="text-sm font-medium text-gray-300">
                       {currencyType === "USD" ? "$" : "₹"}
@@ -347,7 +338,6 @@ const ExpenseForm = () => {
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className="flex gap-4 mt-4 pt-4 border-t border-gray-800">
           <Button
             type="button"
