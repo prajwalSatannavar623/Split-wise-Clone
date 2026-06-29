@@ -33,20 +33,17 @@ const router = createBrowserRouter(
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<SignUp />} />
 
-      {/* {nested route} */}
+      {/*nested route*/}
       <Route path="/dashboard" element={<ProtectedRoute />}>
         <Route element={<Dashboard />}>
-          {/* index => exact -> /dashboard */}
+          {/* index is exact element */}
           <Route index element={<Overview />} />
 
-          {/* Children */}
           <Route path="groups" element={<Groups />} />
           <Route path="groups/:groupId" element={<GroupDetails />} />
           <Route path="groups/:groupId/add-expense" element={<ExpenseForm />} />
 
-          {/* --- NEW: Expense Details Route --- */}
           <Route path="expenses/:expenseId" element={<ExpenseDetails />} />
-
           <Route path="expenses/edit/:expenseId" element={<ExpenseForm />} />
 
           <Route path="friends" element={<Friends />} />
@@ -68,15 +65,14 @@ const App = () => {
     const initAuth = async () => {
       try {
         const response = await apiClient.get("/users/me");
-        // Assuming your backend response data structure
+
         dispatch(
           setCredentials({
             user: response.data.data,
-            // If you store token in localStorage, you can re-validate it here too
           }),
         );
       } catch (err) {
-        console.log("No active session found");
+        console.log("No active session found", err);
       } finally {
         setIsInitializing(false);
       }
@@ -85,7 +81,7 @@ const App = () => {
     initAuth();
   }, [dispatch]);
 
-  // Prevent rendering the router until we know if the user is logged in
+  // loading...
   if (isInitializing) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-gray-900 text-white">
