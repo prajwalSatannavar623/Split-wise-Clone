@@ -50,9 +50,9 @@ All dashboard routes are wrapped within a `<ProtectedRoute />` component. This c
 
 To handle browser refreshes seamlessly, the root `<App />` component stalls the router rendering until it verifies the user's session:
 
-1.  **Mount:** Application triggers an invisible `/users/me` API call.
-2.  **Hydrate:** Upon success, Redux (`authSlice`) is hydrated with the user's persistent data.
-3.  **Render:** The `isInitializing` lock is released, and the `RouterProvider` renders the correct protected layout without jarring redirects.
+1. **Mount:** Application triggers an invisible `/users/me` API call.
+2. **Hydrate:** Upon success, Redux (`authSlice`) is hydrated with the user's persistent data.
+3. **Render:** The `isInitializing` lock is released, and the `RouterProvider` renders the correct protected layout without jarring redirects.
 
 ### 3. Nested Dashboard Layout
 
