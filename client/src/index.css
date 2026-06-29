@@ -17,22 +17,21 @@
   --color-success-500: #10b981;
   --color-success-600: #059669;
 
-  /* --- Text Colors --- */
-  --color-text-base: #1f2937; /* Primary text */
-  --color-text-muted: #6b7280; /* Secondary/Dimmed text */
-  --color-text-inverse: #ffffff; /* Text on dark backgrounds */
+  /* Text Colors */
+  --color-text-base: #1f2937;
+  --color-text-muted: #6b7280;
+  --color-text-inverse: #ffffff;
 
-  /* --- Typography --- */
-  /* Define custom sizes if you want more control than default sm/md/lg */
+  /* Typography */
   --text-tiny: 0.75rem;
   --text-base: 1rem;
   --text-heading: 2.25rem;
   --text-hero: 4rem;
 
-  /* --- Spacing & Layout --- */
+  /* Spacing & Layout */
   --spacing-128: 32rem;
 
-  /* --- Border Radius --- */
+  /* Border Radius */
   --radius-card: 1rem;
 
   /* Dark Background Colors */
