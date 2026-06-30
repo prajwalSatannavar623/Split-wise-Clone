@@ -45,7 +45,7 @@ const Dashboard = () => {
       <aside className="w-64 bg-gray-900 border-r border-gray-800 hidden md:flex flex-col">
         <div className="p-6 border-b border-gray-800">
           <h1 className="text-2xl font-bold text-primary-500">
-            <span>SplitWise</span>
+            <span>Split Wise Clone</span>
             <img src="/logo.svg" alt="SplitWise Logo" className="h-8 w-8" />
           </h1>
         </div>
