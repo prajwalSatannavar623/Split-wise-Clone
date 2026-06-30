@@ -16,7 +16,7 @@ import Friends from "./pages/Dashboard/Friends.jsx";
 import Activity from "./pages/Dashboard/Activity.jsx";
 import Account from "./pages/Dashboard/Account.jsx";
 import Overview from "./pages/Dashboard/Overview.jsx";
-import ExpenseDetails from "./Pages/Dashboard/ExpenseDetails.jsx";
+import ExpenseDetails from "./pages/Dashboard/ExpenseDetails.jsx";
 
 import { useDispatch } from "react-redux";
 import { useState, useEffect } from "react";
@@ -24,7 +24,7 @@ import { apiClient } from "./api/axios.js";
 import { setCredentials } from "./features/authSlice.js";
 
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import UserProfile from "./Pages/Dashboard/UserProfile";
+import UserProfile from "./pages/Dashboard/UserProfile";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
