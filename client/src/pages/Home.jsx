@@ -1,9 +1,13 @@
 import Button from "../components/Button";
+import homeImage from "../../public/images/Home.png";
 
 const Home = () => {
   return (
     <>
-      <div className="bg-[url('src/assets/images/Home.png')] bg-cover w-full h-screen flex flex-col justify-between items-center p-5">
+      <div
+        className="bg-cover w-full h-screen flex flex-col justify-between items-center p-5"
+        style={{ backgroundImage: `url(${homeImage})` }}
+      >
         <h1 className="text-hero font-bold text-text-inverse text-shadow-text-base">
           Splitwise
         </h1>
