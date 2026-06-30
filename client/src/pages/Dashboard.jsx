@@ -44,7 +44,10 @@ const Dashboard = () => {
       {/* {sidebar} */}
       <aside className="w-64 bg-gray-900 border-r border-gray-800 hidden md:flex flex-col">
         <div className="p-6 border-b border-gray-800">
-          <h1 className="text-2xl font-bold text-primary-500">SplitWise</h1>
+          <h1 className="text-2xl font-bold text-primary-500">
+            <span>SplitWise</span>
+            <img src="/logo.svg" alt="SplitWise Logo" className="h-8 w-8" />
+          </h1>
         </div>
 
         <nav className="flex-1 p-4 flex flex-col gap-2">
